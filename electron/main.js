@@ -106,6 +106,7 @@ if (app.isPackaged) {
 }
 
 let mainWindow = null;
+let welcomeWindow = null;
 let isQuitting = false;
 
 const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
@@ -172,10 +173,18 @@ app.whenReady().then(async () => {
 
   createTray();
 
-  // First run has no Twitch credentials yet — take the user straight to
-  // the setup page instead of a dashboard that cannot work.
+  // A version the user hasn't been greeted by yet — a fresh installation, or
+  // the first start after an update — opens the welcome screen, which shows
+  // the version and what changed and then hands over to the setup or the
+  // dashboard itself. Otherwise the old rule still applies: without Twitch
+  // credentials, go straight to setup rather than a dashboard that cannot
+  // work; with credentials, start quietly in the tray as before.
   const { isConfigured } = require(path.join(__dirname, '..', 'twitch', 'appConfig.js'));
-  if (!isConfigured()) {
+  const welcomeState = require(path.join(__dirname, '..', 'update', 'welcomeState.js'));
+
+  if (welcomeState.shouldWelcome(app.getVersion())) {
+    openWelcomeWindow();
+  } else if (!isConfigured()) {
     openAppWindow('setup.html');
   }
 
@@ -184,6 +193,13 @@ app.whenReady().then(async () => {
 
 // Double-clicking the .exe again shouldn't look like nothing happened.
 app.on('second-instance', () => {
+  // Don't drop someone out of the welcome screen just because they started
+  // SYNSA a second time — bring that window forward instead.
+  if (welcomeWindow && !welcomeWindow.isDestroyed()) {
+    welcomeWindow.show();
+    welcomeWindow.focus();
+    return;
+  }
   openAppWindow('dashboard.html');
 });
 
@@ -304,6 +320,73 @@ function openAppWindow(pagePath) {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+}
+
+// The welcome screen gets its own small window rather than reusing the app
+// window: it is a single, self-contained page that is done in one look, and
+// at 1200x820 it would be a mostly empty room. It is also the only window
+// that may really close — everything else hides into the tray.
+function openWelcomeWindow() {
+  welcomeWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    resizable: false,
+    maximizable: false,
+    backgroundColor: '#0b0d0d',
+    autoHideMenuBar: true,
+    title: `SYNSA v${app.getVersion()}`,
+    icon: path.join(__dirname, 'assets', 'tray-icon.png'),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  welcomeWindow.loadURL(`${BASE_URL}/welcome.html`);
+
+  // The page keeps its own title; only the version is appended, exactly like
+  // the app window does.
+  welcomeWindow.on('page-title-updated', (event, title) => {
+    event.preventDefault();
+    welcomeWindow.setTitle(`${title} — v${app.getVersion()}`);
+  });
+
+  // "Weiter" navigates to setup.html or dashboard.html (the page decides
+  // which, from whether Twitch is configured). Neither belongs in a fixed
+  // 600x400 window, so the navigation is intercepted and turned into the
+  // normal app window instead. Anything pointing outside our own server
+  // opens in the real browser, same rule the app window follows.
+  welcomeWindow.webContents.on('will-navigate', (event, targetUrl) => {
+    if (!targetUrl.startsWith(BASE_URL)) {
+      event.preventDefault();
+      shell.openExternal(targetUrl);
+      return;
+    }
+
+    let page;
+    try {
+      page = new URL(targetUrl).pathname.replace(/^\/+/, '');
+    } catch {
+      return; // Not a URL we can reason about — let Electron handle it.
+    }
+
+    if (page === '' || page === 'welcome.html') return; // reload of this page
+
+    event.preventDefault();
+    openAppWindow(page);
+    welcomeWindow.close();
+  });
+
+  welcomeWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (!targetUrl.startsWith(BASE_URL)) {
+      shell.openExternal(targetUrl);
+    }
+    return { action: 'deny' };
+  });
+
+  welcomeWindow.on('closed', () => {
+    welcomeWindow = null;
   });
 }
 

@@ -15,6 +15,8 @@ const { getDataDir } = require('./twitch/dataDir');
 const musicTokenStore = require('./music/tokenStore');
 const music = require('./music/companion');
 const update = require('./update/manager');
+const welcomeState = require('./update/welcomeState');
+const releaseNotes = require('./update/releaseNotes');
 
 const PORT = process.env.PORT || 4242;
 
@@ -489,6 +491,72 @@ app.post('/api/update/install', (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+// --- Welcome screen (first start, and again after every update) ------------
+
+// Marks the running version as "the user has seen the welcome screen for
+// this one", which is what stops it reappearing on every ordinary start.
+// Written here rather than in the page so the format stays in one module
+// (update/welcomeState.js), shared with electron/main.js which reads it.
+app.post('/api/welcome/seen', (req, res) => {
+  const version = require('./package.json').version;
+  res.json({ ok: welcomeState.setWelcomedVersion(version), version });
+});
+
+// The changelog box on the welcome screen. GitHub's release list is the
+// single source of truth — the same release bodies the update banner already
+// shows — so there is no second changelog file to keep in sync. Owner and
+// repo come from the publish configuration rather than being written out
+// again here.
+const CHANGELOG_CACHE_MS = 15 * 60 * 1000;
+const CHANGELOG_TIMEOUT_MS = 8000;
+const CHANGELOG_LIMIT = 10;
+let changelogCache = { fetchedAt: 0, entries: null };
+
+app.get('/api/changelog', async (req, res) => {
+  const now = Date.now();
+  if (changelogCache.entries && now - changelogCache.fetchedAt < CHANGELOG_CACHE_MS) {
+    res.json({ entries: changelogCache.entries, currentVersion: require('./package.json').version });
+    return;
+  }
+
+  const { owner, repo } = require('./package.json').build.publish;
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=${CHANGELOG_LIMIT}`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'SYNSA' },
+      signal: AbortSignal.timeout(CHANGELOG_TIMEOUT_MS),
+    });
+    if (!response.ok) throw new Error(`GitHub antwortete mit ${response.status}`);
+
+    const entries = (await response.json())
+      .filter((release) => !release.draft)
+      .map((release) => {
+        // Tags are "v0.1.5"; the leading v is presentation, not part of the version.
+        const version = String(release.tag_name || '').replace(/^v/, '');
+        const notes = releaseNotes.toLines(release.body, { limit: 12 });
+
+        // Release bodies open with a "SYNSA 0.1.5" heading line, which the
+        // changelog entry already shows as its own headline — repeating it as
+        // the first bullet just wastes a line in a small window.
+        if (notes.length > 0 && notes[0].replace(/\s+/g, ' ').trim().toLowerCase() === `synsa ${version}`.toLowerCase()) {
+          notes.shift();
+        }
+
+        return { version, publishedAt: release.published_at || null, notes };
+      })
+      .filter((entry) => entry.version);
+
+    changelogCache = { fetchedAt: now, entries };
+    res.json({ entries, currentVersion: require('./package.json').version });
+  } catch (err) {
+    // No changelog is not an error worth blocking the welcome screen over —
+    // the page hides the box and lets the user continue (offline first start,
+    // GitHub unreachable, rate limit).
+    console.error('Changelog konnte nicht geladen werden:', err.message);
+    res.json({ entries: [], unavailable: true, currentVersion: require('./package.json').version });
+  }
 });
 
 // --- First-run setup (Twitch app credentials) ------------------------------

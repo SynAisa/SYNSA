@@ -1,0 +1,329 @@
+/* Welcome screen — shown in its own small window on a fresh installation and
+   again after every update (see electron/main.js). Sized for the compact
+   window rather than the 1200x820 app window, so it uses its own layout
+   instead of the shared .page/.card rules from control.css; the brand tokens
+   still come from theme.css. --border and --bg-card are kept byte-for-byte
+   identical to control.css on purpose (see the note in theme.css about why
+   those two are defined per page). */
+:root {
+  --bg-page: #0b0d0d;
+  --bg-card: rgba(22, 25, 25, 0.9);
+  --border: rgba(53, 201, 168, 0.25);
+  --text-muted: rgba(241, 245, 243, 0.62);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  /* No window chrome to drag by inside the app window, and nothing here is
+     wide enough to need scrolling — the changelog scrolls on its own. */
+  overflow: hidden;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 18px 20px 16px;
+  gap: 14px;
+}
+
+/* --- Header --- */
+
+.welcome-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex: none;
+}
+
+.welcome-brand {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text);
+}
+
+.welcome-version {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+/* --- Status card --- */
+
+.status-card {
+  flex: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.status-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot[data-state='checking'],
+.status-dot[data-state='downloading'] {
+  background: var(--accent);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.status-dot[data-state='current'] {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(53, 201, 168, 0.16);
+}
+
+.status-dot[data-state='available'],
+.status-dot[data-state='ready'] {
+  background: var(--highlight);
+  box-shadow: 0 0 0 3px rgba(114, 227, 197, 0.16);
+}
+
+.status-dot[data-state='error'] {
+  background: #e2705f;
+  box-shadow: 0 0 0 3px rgba(226, 112, 95, 0.16);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot {
+    animation: none;
+  }
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.status-text strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.status-action {
+  flex: none;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #08100e;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.status-action:hover:not(:disabled) {
+  background: var(--highlight);
+}
+
+.status-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* --- Download progress --- */
+
+.progress {
+  margin-top: 11px;
+}
+
+.progress-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  /* Digits must not shift the layout while counting up. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Changelog --- */
+
+.changelog {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  /* Takes the remaining height and scrolls internally, so the footer button
+     stays visible no matter how long the release notes are. */
+  flex: 1;
+  min-height: 0;
+}
+
+.changelog-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.changelog-box {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+
+.changelog-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.changelog-box::-webkit-scrollbar-thumb {
+  background: rgba(53, 201, 168, 0.28);
+  border-radius: 4px;
+}
+
+.changelog-entry + .changelog-entry {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.changelog-entry-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.changelog-entry-version {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.changelog-entry-current {
+  font-size: 10px;
+  font-weight: 600;
+  color: #08100e;
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.changelog-entry-date {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.changelog-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.changelog-list li {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(241, 245, 243, 0.85);
+}
+
+.changelog-list li + li {
+  margin-top: 3px;
+}
+
+.changelog-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* --- Footer --- */
+
+.welcome-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footer-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.continue-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 22px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #08100e;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.continue-btn:hover:not(:disabled) {
+  background: var(--highlight);
+}
+
+.continue-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

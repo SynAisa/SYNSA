@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Willkommen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/welcome.css">
+</head>
+<body>
+  <main class="welcome">
+    <header class="welcome-header">
+      <div class="welcome-brand">SYNSA</div>
+      <span class="welcome-version" id="version-badge">–</span>
+    </header>
+
+    <section class="status-card" id="status-card">
+      <div class="status-line">
+        <span class="status-dot" id="status-dot" data-state="checking"></span>
+        <div class="status-text">
+          <strong id="status-title">Suche nach Updates …</strong>
+          <span id="status-subtitle">Einen Moment.</span>
+        </div>
+        <button type="button" id="status-action" class="status-action" hidden></button>
+      </div>
+
+      <div class="progress" id="progress" hidden>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-meta">
+          <span id="progress-percent">0 %</span>
+          <span id="progress-detail"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="changelog" id="changelog-section">
+      <h2 class="changelog-title">Änderungen</h2>
+      <div class="changelog-box" id="changelog-box">
+        <p class="changelog-empty" id="changelog-empty">Wird geladen …</p>
+      </div>
+    </section>
+
+    <footer class="welcome-footer">
+      <span class="footer-note" id="footer-note"></span>
+      <button type="button" id="continue-btn" class="continue-btn">Weiter</button>
+    </footer>
+  </main>
+
+  <script src="/js/welcome.js"></script>
+</body>
+</html>

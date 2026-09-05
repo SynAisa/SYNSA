@@ -80,22 +80,10 @@ const CHECK_TIMEOUT_MS = 30000;
 // quitAndInstall() call knows what's actually been downloaded.
 let lastUpdateInfo = null;
 
-// electron-updater's releaseNotes can be a plain string, or (when several
-// versions are skipped at once) an array of { version, note } entries.
-// Either way this only ever produces plain lines of text for the existing
-// banner UI to render — no markdown rendering, no HTML interpretation.
-function extractNotes(releaseNotes) {
-  if (!releaseNotes) return [];
-
-  const raw = Array.isArray(releaseNotes) ? releaseNotes.map((entry) => entry.note || '').join('\n') : String(releaseNotes);
-
-  return raw
-    .replace(/<[^>]+>/g, '') // strip any embedded HTML from the GitHub release body
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^[-*]\s*/, '').trim())
-    .filter(Boolean)
-    .slice(0, 20);
-}
+// Release bodies are turned into plain text lines by update/releaseNotes.js,
+// shared with the changelog the welcome screen shows so both render the exact
+// same release the exact same way.
+const { toLines: extractNotes } = require('./releaseNotes');
 
 // No native concept of "critical" exists in a GitHub Release — this is a
 // simple, explicit convention (not a real version-comparison decision,

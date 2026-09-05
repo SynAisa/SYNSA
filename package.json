@@ -53,7 +53,7 @@
       "menuCategory": false,
       "deleteAppDataOnUninstall": false,
       "packElevateHelper": true,
-      "artifactName": "SYNSA-Setup-${version}.exe",
+      "artifactName": "SYNSA-Setup.exe",
       "include": "build/installer.nsh"
     },
     "publish": {
