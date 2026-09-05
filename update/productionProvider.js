@@ -19,7 +19,36 @@
 // app.getVersion()/app.getPath() etc. internally) — this module is only
 // ever loaded when SYNSA_UPDATE_PROVIDER=production, which only makes sense
 // running under the real packaged app, never under plain `node server.js`.
+const fs = require('fs');
+const path = require('path');
+const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
+
+// electron-updater's own messages are the only record of what happens during
+// the install step — which ends with the app exiting immediately afterwards.
+// The async log stream in electron/main.js never gets to flush those last
+// lines, so exactly the messages that would explain an install which appeared
+// to do nothing ("run installer using elevate.exe", "Executing: ...",
+// "Cannot run installer: error code: ...") were the ones reproducibly lost.
+// These events are few and rare, so they are written straight to disk
+// synchronously, into the same file main.js logs to; normal app logging keeps
+// its async stream and stays unaffected.
+const UPDATER_LOG_PATH = path.join(app.getPath('userData'), 'synsa.log');
+
+function writeUpdaterLog(level, ...args) {
+  try {
+    fs.appendFileSync(UPDATER_LOG_PATH, `[${new Date().toISOString()}] [updater/${level}] ${args.map(String).join(' ')}\n`);
+  } catch {
+    // Logging must never be the reason an update fails.
+  }
+}
+
+autoUpdater.logger = {
+  info: (...args) => writeUpdaterLog('info', ...args),
+  warn: (...args) => writeUpdaterLog('warn', ...args),
+  error: (...args) => writeUpdaterLog('error', ...args),
+  debug: (...args) => writeUpdaterLog('debug', ...args),
+};
 
 // Explicit, not inferred from the git remote (electron-builder does that
 // automatically for app-update.yml when a `publish` block exists in
