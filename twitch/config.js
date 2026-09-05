@@ -1,7 +1,5 @@
 require('dotenv').config();
 
-const PORT = process.env.PORT || 4242;
-
 // SYNSA's own Twitch application, registered as a *public* client.
 //
 // A client ID is not a secret: it names the application, the way a package
@@ -14,7 +12,7 @@ const PORT = process.env.PORT || 4242;
 //
 // Overridable through TWITCH_CLIENT_ID for development against a separate
 // Twitch application.
-const BUILT_IN_CLIENT_ID = '';
+const BUILT_IN_CLIENT_ID = 'opbe7goc33jogo54rc5wjay3lllqjc';
 
 module.exports = {
   get clientId() {
@@ -28,10 +26,9 @@ module.exports = {
     return Boolean(this.clientId);
   },
 
-  // Kept for the local callback URL shown in the UI and for anyone still
-  // running an own Twitch application via TWITCH_CLIENT_ID; the device code
-  // flow itself never redirects anywhere.
-  redirectUri: process.env.TWITCH_REDIRECT_URI || `http://localhost:${PORT}/auth/twitch/callback`,
+  // (No redirect URI: the device code flow never redirects, and the callback
+  // route it would have pointed at is gone. Twitch still requires a redirect
+  // URL when registering the application, but nothing here ever uses it.)
 
   // Every scope SYNSA asks for, and the feature it exists for. The setup
   // screen explains these to the user in the same order, so keep the two in
