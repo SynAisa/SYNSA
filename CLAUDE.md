@@ -506,7 +506,7 @@ Local project:
 
 
 
-C:\\Users\\dspan\\Documents\\Stream alerts
+<project-root>
 
 
 
