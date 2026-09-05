@@ -171,7 +171,17 @@ function quitAndInstall() {
   if (!lastUpdateInfo) {
     throw new Error('quitAndInstall() called with no downloaded update on record');
   }
-  autoUpdater.quitAndInstall();
+  // isSilent=true, isForceRunAfter=true: the downloaded NSIS installer
+  // still runs elevated via UAC (isAdminRightsRequired is computed
+  // separately, from the downloaded file's own metadata, and is
+  // unaffected by isSilent) but without its own visible install wizard,
+  // and relaunches SYNSA automatically afterward. Without isSilent here,
+  // the user would see a normal NSIS installer UI after confirming UAC,
+  // and — in our oneClick:false config specifically — the app would not
+  // even auto-restart afterward at all (electron-builder's assisted
+  // installer only honors "run after finish" when combined with silent
+  // mode; see installSection.nsh).
+  autoUpdater.quitAndInstall(true, true);
 }
 
 module.exports = { checkForUpdate, download, quitAndInstall, IS_LOCAL_TEST_PROVIDER: false };
