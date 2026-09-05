@@ -1,12 +1,12 @@
 {
   "name": "synsa",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "SYNSA — local Twitch stream toolkit: alert overlays, chat dashboard, now-playing and countdown modules for OBS.",
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
     "electron": "electron .",
-    "dist": "electron-builder --win portable"
+    "dist": "electron-builder --win nsis"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
@@ -33,10 +33,20 @@
       "!node_modules/electron*/**"
     ],
     "win": {
-      "target": "portable"
+      "target": "nsis",
+      "icon": "electron/assets/app-icon.ico"
     },
-    "portable": {
-      "artifactName": "SYNSA.exe"
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SYNSA",
+      "menuCategory": false,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "SYNSA Setup ${version}.exe",
+      "include": "build/installer.nsh"
     }
   },
   "allowScripts": {
