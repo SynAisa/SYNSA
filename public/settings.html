@@ -3,19 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SYNSA · Einrichtung</title>
+<title>SYNSA · Einstellungen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/theme.css">
 <link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
 <link rel="stylesheet" href="/css/update.css">
 </head>
 <body>
   <div class="page">
     <header class="page-header">
-      <h1>Einrichtung</h1>
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Einstellungen</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
     </header>
+
+    <div class="card">
+      <div class="card-title">Updates</div>
+      <div class="update-check-row">
+        <span id="update-version-text" class="twitch-status"></span>
+        <button type="button" id="update-check-btn" class="twitch-connect">Nach Updates suchen</button>
+      </div>
+      <span id="update-check-feedback" class="update-check-feedback"></span>
+    </div>
 
     <div id="update-banner" class="update-banner" hidden>
       <div id="update-banner-main" class="update-banner-main">
@@ -39,44 +53,10 @@
         <button type="button" id="update-banner-retry-btn">Erneut versuchen</button>
       </div>
     </div>
-
-    <p class="hint">
-      Einmalig nötig: SYNSA braucht eine eigene Twitch-App, damit es
-      auf deinen Kanal zugreifen darf. Dauert zwei Minuten.
-    </p>
-
-    <div class="card setup-card">
-      <div class="card-title">Schritt 1 · Twitch-App anlegen</div>
-      <ol class="setup-steps">
-        <li>Öffne <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noreferrer">dev.twitch.tv/console/apps</a> und melde dich an.</li>
-        <li>Klick auf <strong>„Anwendung registrieren"</strong>.</li>
-        <li><strong>Name:</strong> frei wählbar, muss aber Twitch-weit eindeutig sein (z.&nbsp;B. „SYNSA DeinName").</li>
-        <li><strong>OAuth-Weiterleitungs-URL:</strong> exakt <code id="redirect-uri">http://localhost:4242/auth/twitch/callback</code></li>
-        <li><strong>Kategorie:</strong> beliebig · <strong>Clienttyp:</strong> <strong>Vertraulich</strong></li>
-        <li>Nach dem Anlegen: <strong>Client-ID</strong> kopieren, dann <strong>„Neues Geheimnis"</strong> klicken und das <strong>Client-Secret</strong> kopieren (wird nur einmal angezeigt).</li>
-      </ol>
-    </div>
-
-    <form id="setup-form" class="card setup-card">
-      <div class="card-title">Schritt 2 · Zugangsdaten eintragen</div>
-      <label>
-        Client-ID
-        <input type="text" id="client-id" autocomplete="off" spellcheck="false" required>
-      </label>
-      <label>
-        Client-Secret
-        <input type="password" id="client-secret" autocomplete="off" spellcheck="false" required>
-      </label>
-      <button type="submit">Speichern und weiter</button>
-      <span id="setup-status" class="setup-status"></span>
-      <p class="setup-note">
-        Wird nur lokal auf diesem PC gespeichert und niemals irgendwohin gesendet
-        außer an Twitch selbst.
-      </p>
-    </form>
   </div>
 
+  <script src="/shared/module-menu.js"></script>
   <script src="/shared/update-banner.js"></script>
-  <script src="/js/setup.js"></script>
+  <script src="/js/settings.js"></script>
 </body>
 </html>

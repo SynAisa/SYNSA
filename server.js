@@ -14,6 +14,7 @@ const seventv = require('./twitch/seventv');
 const { getDataDir } = require('./twitch/dataDir');
 const musicTokenStore = require('./music/tokenStore');
 const music = require('./music/companion');
+const update = require('./update/manager');
 
 const PORT = process.env.PORT || 4242;
 
@@ -95,6 +96,9 @@ const state = {
   // which is live playback data from YTMDesktop and gets wholesale
   // overwritten on every status update.
   musicSettings: { showCover: true, accentColor: '#35C9A8' },
+  // Populated below once update.init() runs; present here mainly so its
+  // shape is visible next to the rest of state at a glance.
+  update: null,
 };
 
 // The event history (follows/subs/cheers/raids) is persisted to disk so it
@@ -263,6 +267,17 @@ wss.on('connection', (ws) => {
       applyMusicStatus({ ...state.music, ...msg.status, connected: true });
     }
 
+    // Test hook mirroring trigger-alert/trigger-chat/trigger-music: exercises
+    // the update system's stream lock (see update/manager.js) without a real
+    // Twitch broadcast. Goes through the exact same state.stream + onStream
+    // path a real EventSub stream.online/offline event uses, so this drives
+    // the one existing live/offline state rather than adding a second one.
+    if (msg.kind === 'trigger-stream' && msg.status) {
+      state.stream = { ...state.stream, ...msg.status };
+      broadcast({ kind: 'stream-status', status: state.stream });
+      update.notifyStreamChanged();
+    }
+
     if (msg.kind === 'set-volume' && typeof msg.volume === 'number') {
       state.volume = Math.max(0, Math.min(1, msg.volume));
       broadcast({ kind: 'volume', volume: state.volume });
@@ -367,6 +382,9 @@ eventsub.init({
   onStream: (status) => {
     state.stream = status;
     broadcast({ kind: 'stream-status', status });
+    // A ready-and-waiting update must immediately reflect the stream lock
+    // the instant it changes, not just at the moment it was downloaded.
+    update.notifyStreamChanged();
   },
 });
 
@@ -383,6 +401,23 @@ function applyMusicStatus(status) {
 }
 
 music.init({ onStatus: applyMusicStatus });
+
+// --- Updates (Phase 2A: local test provider only) ---------------------------
+
+// getCurrentVersion reads package.json directly rather than caching it, so
+// it stays correct even across the in-place restart a real install would
+// perform. isStreamLive reuses the *existing* Twitch live/offline state
+// (state.stream, set by eventsub's onStream below) instead of creating a
+// second, independent implementation.
+update.init({
+  getCurrentVersion: () => require('./package.json').version,
+  isStreamLive: () => state.stream.live,
+});
+state.update = update.getState();
+update.onChange((updateState) => {
+  state.update = updateState;
+  broadcast({ kind: 'update-status', status: updateState });
+});
 
 // --- Twitch OAuth (Authorization Code flow) -------------------------------
 
@@ -413,6 +448,47 @@ function consumeOAuthState(value) {
 // window title) — reads package.json rather than duplicating the number.
 app.get('/api/version', (req, res) => {
   res.json({ version: require('./package.json').version });
+});
+
+// --- Updates (Phase 2A: local test provider only, see update/manager.js) ---
+
+app.get('/api/update/status', (req, res) => {
+  res.json(update.getState());
+});
+
+app.post('/api/update/check', async (req, res) => {
+  const result = await update.checkForUpdates({ manual: true });
+  res.json(result);
+});
+
+app.post('/api/update/dismiss', (req, res) => {
+  res.json(update.dismissForSession());
+});
+
+app.post('/api/update/accept', async (req, res) => {
+  const result = await update.acceptUpdate();
+  res.json(result);
+});
+
+app.post('/api/update/retry', async (req, res) => {
+  const result = await update.retry();
+  res.json(result);
+});
+
+const INSTALL_BLOCKED_MESSAGES = {
+  'not-ready': 'Das Update ist noch nicht bereit.',
+  'stream-live': 'Das Update kann während eines laufenden Streams nicht installiert werden.',
+  'no-handler': 'Die Installation ist in dieser Umgebung nicht verfügbar.',
+  failed: 'Die Installation konnte nicht vorbereitet werden.',
+};
+
+app.post('/api/update/install', (req, res) => {
+  const result = update.requestInstall();
+  if (!result.ok) {
+    res.status(409).json({ ok: false, reason: result.reason, message: INSTALL_BLOCKED_MESSAGES[result.reason] });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 // --- First-run setup (Twitch app credentials) ------------------------------

@@ -36,6 +36,12 @@
     },
   ];
 
+  const SETTINGS_MODULE = {
+    label: 'Einstellungen',
+    href: '/settings.html',
+    icon: GEAR_ICON,
+  };
+
   const root = document.getElementById('module-menu-root');
   if (!root) return;
 
@@ -55,7 +61,7 @@
         <div class="module-menu-flyout" id="module-menu-flyout" hidden>
           ${itemsHtml}
           <div class="module-menu-separator"></div>
-          <button type="button" class="module-menu-item module-menu-item--disabled" disabled title="Bald verfügbar">${GEAR_ICON}<span>Einstellungen</span></button>
+          <a href="${SETTINGS_MODULE.href}" class="module-menu-item${SETTINGS_MODULE.href === currentPath ? ' is-active' : ''}">${SETTINGS_MODULE.icon}<span>${SETTINGS_MODULE.label}</span></a>
           <div class="module-menu-version" id="module-menu-version"></div>
         </div>
       </div>

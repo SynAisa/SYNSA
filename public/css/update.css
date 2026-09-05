@@ -1,0 +1,226 @@
+/* Update banner + toast — shared by dashboard.html and settings.html via
+   public/shared/update-banner.js. Kept in its own file (rather than folded
+   into dashboard.css) so settings.html doesn't need to pull in unrelated
+   dashboard-only styles just to render this one component.
+
+   Visual language matches the existing .subscription-warning banner exactly
+   (flat left accent border, same radius/padding/background) rather than
+   introducing a new alert style. */
+
+.update-check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.update-check-feedback {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-height: 14px;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.update-check-feedback.is-visible {
+  opacity: 1;
+}
+
+.update-banner {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  flex: none;
+}
+
+.update-banner[hidden] {
+  display: none;
+}
+
+.update-banner.is-critical {
+  border-color: rgba(217, 167, 92, 0.45);
+  border-left-color: var(--type-cheer, #d9a75c);
+  background: rgba(217, 167, 92, 0.09);
+}
+
+.update-banner-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.update-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.update-banner-text strong {
+  font-size: 13px;
+}
+
+.update-banner.is-critical .update-banner-text strong {
+  color: var(--type-cheer, #d9a75c);
+}
+
+.update-banner-text span {
+  color: var(--text-muted);
+}
+
+.update-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.update-banner-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.update-banner-link:hover {
+  color: var(--highlight);
+}
+
+.update-banner-primary {
+  background: var(--accent);
+  color: #0b0d0d;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.update-banner-primary:hover {
+  background: var(--highlight);
+}
+
+.update-banner-primary.is-blocked {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.update-banner-primary.is-blocked:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.update-banner-progress {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.update-banner-progress[hidden] {
+  display: none;
+}
+
+.update-banner-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.update-banner-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 200ms ease;
+}
+
+.update-banner-progress-label {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.update-banner-notes {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.update-banner-notes[hidden] {
+  display: none;
+}
+
+.update-banner-notes ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.update-banner-error {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #e07a7a;
+}
+
+.update-banner-error[hidden] {
+  display: none;
+}
+
+.update-banner-error button {
+  background: none;
+  border: 1px solid rgba(224, 122, 122, 0.4);
+  color: #e07a7a;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: none;
+}
+
+.update-banner-error button:hover {
+  background: rgba(224, 122, 122, 0.1);
+}
+
+/* Toast — identical to dashboard.css's own .toast so pages that don't load
+   dashboard.css (settings.html) still get it via this file. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  background: #1b2622;
+  border: 1px solid rgba(224, 122, 122, 0.4);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  max-width: 80%;
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

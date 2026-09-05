@@ -108,6 +108,37 @@ if (app.isPackaged) {
 let mainWindow = null;
 let isQuitting = false;
 
+const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
+
+// Phase 2A: no real second build exists to install yet (see the local test
+// provider), so "installing" here means honestly restarting the current
+// installation rather than faking a version change. A real Phase 2B
+// provider would instead hand back a downloaded installer for
+// quitAndInstall()-style logic — this callback is the one place that will
+// need to change for that.
+update.setInstallHandler(() => {
+  app.relaunch();
+  app.exit(0);
+});
+
+// Runs once per app start. No native dialog and no window management here
+// on purpose: an earlier version showed a dialog.showMessageBoxSync popup
+// and/or forced a navigation to dashboard.html, both of which interrupted
+// whatever the user was doing (setup.html included) for UX no one asked
+// for. The check just updates UpdateManager's state; whichever page the
+// user already has open (setup.html, dashboard.html, settings.html — see
+// public/shared/update-banner.js, present on all three) picks the result
+// up on its own over its own WebSocket connection. Manual, on-demand
+// checks go through the exact same update.checkForUpdates() call (see
+// server.js's "Nach Updates suchen" endpoint) — no separate logic.
+async function checkForUpdatesOnStartup() {
+  try {
+    await update.checkForUpdates({ manual: false });
+  } catch (err) {
+    console.error('Startup update check failed:', err.message);
+  }
+}
+
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
 
@@ -133,6 +164,8 @@ app.whenReady().then(async () => {
   if (!isConfigured()) {
     openAppWindow('setup.html');
   }
+
+  checkForUpdatesOnStartup();
 });
 
 // Double-clicking the .exe again shouldn't look like nothing happened.

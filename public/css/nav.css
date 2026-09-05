@@ -142,14 +142,6 @@
   color: var(--accent);
 }
 
-.module-menu-item--disabled,
-.module-menu-item--disabled:hover {
-  color: var(--text-muted);
-  cursor: default;
-  background: none;
-  opacity: 0.6;
-}
-
 .module-menu-separator {
   height: 1px;
   margin: 6px 4px;
