@@ -566,5 +566,3 @@ When reviewing code, distinguish between:
 
 Do not make unrelated changes while implementing a requested feature.
 
-<!-- Git workflow test -->
-
