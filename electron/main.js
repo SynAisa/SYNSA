@@ -110,12 +110,15 @@ let isQuitting = false;
 
 const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
 
-// Same selector update/manager.js uses to pick its provider — kept here in
-// sync (rather than asking manager.js which provider it loaded) because
-// only this file, the real Electron main process, is allowed to know
-// anything about electron-updater at all. update/manager.js and every
-// renderer page stay completely unaware of which provider is active.
-const USE_PRODUCTION_UPDATE_PROVIDER = process.env.SYNSA_UPDATE_PROVIDER === 'production';
+// The provider decision itself lives in update/manager.js (packaged app ->
+// real GitHub releases, dev run -> local test provider, SYNSA_UPDATE_PROVIDER
+// overrides both) and is read back from there rather than re-derived here:
+// the two used to evaluate the same environment variable separately, which
+// only had to drift once to register an install handler that didn't match
+// the provider actually loaded. Knowing *which* provider is active is not the
+// same as knowing about electron-updater — that stays confined to this file
+// and update/productionProvider.js, and no renderer page learns either.
+const USE_PRODUCTION_UPDATE_PROVIDER = update.USE_PRODUCTION_PROVIDER;
 
 if (USE_PRODUCTION_UPDATE_PROVIDER) {
   // A real downloaded update needs electron-updater's own quit-and-run-the-
@@ -202,8 +205,22 @@ function setupFileLogging() {
   for (const method of ['log', 'error', 'warn']) {
     const original = console[method].bind(console);
     console[method] = (...args) => {
-      original(...args);
-      stream.write(`[${new Date().toISOString()}] ${args.map(String).join(' ')}\n`);
+      // Each half is isolated: a packaged SYNSA is usually started without
+      // any console attached (a shortcut, the tray, or — after an update —
+      // the installer itself relaunching it), and a stdout write that throws
+      // in that situation must not be able to take the log file with it.
+      // This file is the only record of what happened during an unattended
+      // update, so it is the half that has to survive.
+      try {
+        original(...args);
+      } catch {
+        // No usable stdout — the file below is what matters.
+      }
+      try {
+        stream.write(`[${new Date().toISOString()}] ${args.map(String).join(' ')}\n`);
+      } catch {
+        // Never let logging itself break the app.
+      }
     };
   }
 }

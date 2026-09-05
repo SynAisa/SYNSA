@@ -52,6 +52,7 @@
       "shortcutName": "SYNSA",
       "menuCategory": false,
       "deleteAppDataOnUninstall": false,
+      "packElevateHelper": true,
       "artifactName": "SYNSA-Setup-${version}.exe",
       "include": "build/installer.nsh"
     },

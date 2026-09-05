@@ -22,8 +22,28 @@
 //     onProgress is called with { downloadedBytes, totalBytes, percent }
 const { isNewerVersion } = require('./versionCompare');
 
-const provider =
-  process.env.SYNSA_UPDATE_PROVIDER === 'production' ? require('./productionProvider') : require('./localTestProvider');
+// Which provider backs UpdateManager. An installed, packaged SYNSA must use
+// the real GitHub-Releases provider: shipping the local test provider there
+// would show real users invented update banners for releases that don't
+// exist and can never install (see the header of update/localTestProvider.js
+// — it is explicitly not a production update source). A dev run keeps the
+// test provider, so `node server.js` and an unpacked `electron .` behave
+// exactly as they did before.
+//
+// process.defaultApp is set by Electron only when running unpackaged
+// (`electron .`) and is undefined inside a packaged app, so this needs no
+// require('electron') and stays correct under plain Node too, where
+// process.versions.electron is undefined.
+const IS_PACKAGED_APP = Boolean(process.versions.electron) && !process.defaultApp;
+
+// SYNSA_UPDATE_PROVIDER still overrides the default in both directions:
+// "production" exercises the real provider from a dev checkout (how Phase 2B
+// was tested), "local" forces the test provider inside a packaged build.
+const USE_PRODUCTION_PROVIDER =
+  process.env.SYNSA_UPDATE_PROVIDER === 'production' ||
+  (process.env.SYNSA_UPDATE_PROVIDER !== 'local' && IS_PACKAGED_APP);
+
+const provider = USE_PRODUCTION_PROVIDER ? require('./productionProvider') : require('./localTestProvider');
 
 const PHASES = {
   IDLE: 'idle',
@@ -261,6 +281,10 @@ function requestInstall() {
 
 module.exports = {
   PHASES,
+  // Exported so electron/main.js registers the matching install handler off
+  // the exact same decision this file made, instead of re-deriving it from
+  // the environment and risking the two drifting apart.
+  USE_PRODUCTION_PROVIDER,
   init,
   setInstallHandler,
   onChange,
