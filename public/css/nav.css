@@ -1,0 +1,172 @@
+/* Gear-icon module menu, shared across Dashboard/Control-Panel/Music-Settings.
+   Relies on the --accent/--highlight/--border/--text/--text-muted variables
+   already declared by each page's own :root block.
+
+   Every button here sets margin explicitly. control.css has a generic
+   `button { margin-top: 4px; ... }` reset for its own form buttons — class
+   selectors here already beat it on every property they declare, but none
+   of them declared margin, so that lone property quietly won anyway and
+   pushed the gear 4px lower on control.css-based pages than on Dashboard.
+   Nav.css is meant to look identical regardless of which page hosts it, so
+   it can't rely on a host page never having its own generic button rule. */
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-arrow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.nav-arrow-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-arrow-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.module-menu {
+  position: relative;
+}
+
+.module-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.module-menu-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.module-menu-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.module-menu-flyout {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 6px;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  z-index: 40;
+  /* Same fade+lift as the Verlauf tooltip (dashboard.css) — dropping the
+     `hidden` attribute used to be the only thing gating visibility, so the
+     menu just snapped into existence. `.is-visible` is added a frame after
+     `hidden` clears (see public/shared/module-menu.js) so this actually has
+     something to transition from. */
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+/* display:flex above otherwise beats the browser's default
+   [hidden]{display:none} — same trap the alert filter rows hit. */
+.module-menu-flyout[hidden] {
+  display: none;
+}
+
+.module-menu-flyout.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.module-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.module-menu-item svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+}
+
+.module-menu-item:hover {
+  background: rgba(53, 201, 168, 0.1);
+}
+
+.module-menu-item.is-active {
+  color: var(--accent);
+}
+
+.module-menu-item.is-active svg {
+  color: var(--accent);
+}
+
+.module-menu-item--disabled,
+.module-menu-item--disabled:hover {
+  color: var(--text-muted);
+  cursor: default;
+  background: none;
+  opacity: 0.6;
+}
+
+.module-menu-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.module-menu-version {
+  padding: 6px 10px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

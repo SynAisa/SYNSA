@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Music-Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Music-Overlay</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
+    </header>
+
+    <p class="hint">
+      Zeigt den aktuell in <strong>YouTube Music Desktop App</strong> (YTMDesktop) laufenden Song
+      als Overlay in OBS. Erfordert YTMDesktop mit aktiviertem Companion Server
+      (Einstellungen → Integrationen → Companion Server).
+    </p>
+
+    <div class="card twitch-card">
+      <div class="card-title">Verbindung</div>
+      <div class="twitch-row">
+        <span id="music-status-text" class="twitch-status">Nicht verbunden</span>
+        <button type="button" id="music-connect-btn" class="twitch-connect">Verbinden</button>
+        <button type="button" id="music-disconnect-btn" class="twitch-disconnect" hidden>Trennen</button>
+      </div>
+      <div id="music-pair-note" class="twitch-session" hidden></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Anzeige</div>
+      <div class="music-display-row">
+        <label class="checkbox-row">
+          <input type="checkbox" id="music-show-cover" checked>
+          Cover anzeigen
+        </label>
+        <label class="music-color-label">
+          Akzentfarbe
+          <div class="color-hex-row">
+            <input type="color" id="music-accent-color" value="#35C9A8">
+            <input type="text" id="music-accent-color-hex" class="color-hex-input" value="#35C9A8" maxlength="7" spellcheck="false" autocomplete="off">
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="card music-nowplaying-card" id="music-nowplaying-card" hidden>
+      <div class="card-title">Jetzt läuft</div>
+      <div class="music-nowplaying-row">
+        <img id="music-nowplaying-cover" class="music-nowplaying-cover" alt="">
+        <div class="music-nowplaying-meta">
+          <div id="music-nowplaying-title" class="music-nowplaying-title"></div>
+          <div id="music-nowplaying-artist" class="music-nowplaying-artist"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overlay-URL</div>
+      <p class="hint" style="margin-bottom: 0;">
+        Als OBS Browser Source:
+        <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay-music.html">
+          <code class="reveal-copy-value"></code>
+          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <script src="/shared/module-menu.js"></script>
+  <script src="/shared/reveal-copy.js"></script>
+  <script src="/js/music-settings.js"></script>
+</body>
+</html>

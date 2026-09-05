@@ -1,0 +1,1078 @@
+:root {
+  --bg-page: #0b0d0d;
+  --bg-card: rgba(22, 25, 25, 0.9);
+  --bg-row: rgba(255, 255, 255, 0.03);
+  --border: rgba(53, 201, 168, 0.25);
+  --live: #E5484D;
+  /* Verlauf icon colors only — kept muted on purpose so they read as a
+     scanning aid, not a second competing accent system next to the
+     playing/pending highlight colors. */
+  --type-follow: #35C9A8;
+  /* A true green, not another teal/mint — the original mint was only
+     ~10° away from follow's teal on the color wheel and read as "the
+     same color" at icon size. This sits in actual green territory. */
+  --type-subscription: #7BC96F;
+  --type-cheer: #D9A75C;
+  --type-raid: #8C93E0;
+  --text-muted: rgba(241, 245, 243, 0.58);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.page {
+  height: 100vh;
+  max-width: 1200px;
+  /* Not centered: a centered .page here plus control.css's differently
+     sized centered .page meant the gear button visibly jumped left/right
+     between pages whenever the window was wider than 760-1200px (i.e.
+     almost always). Flush left on every page keeps it pinned to the same
+     spot regardless of that page's own content width. */
+  margin: 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex: none;
+}
+
+h1 {
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(241, 245, 243, 0.4);
+}
+
+.status.is-connected {
+  color: var(--accent);
+}
+
+.panel.stream-info-panel {
+  flex: none;
+  margin-bottom: 16px;
+  overflow: visible;
+}
+
+/* Only shown when Twitch rejected one of our EventSub subscriptions —
+   otherwise that failure is invisible and whole alert types silently stop
+   arriving. */
+.subscription-warning {
+  margin-bottom: 16px;
+  padding: 11px 16px;
+  border: 1px solid rgba(217, 167, 92, 0.45);
+  border-left: 3px solid var(--type-cheer);
+  border-radius: 10px;
+  background: rgba(217, 167, 92, 0.09);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  flex: none;
+}
+
+.subscription-warning[hidden] {
+  display: none;
+}
+
+.subscription-warning strong {
+  color: var(--type-cheer);
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.live-indicator.is-live {
+  color: var(--live);
+}
+
+.live-indicator.is-live .live-dot {
+  background: var(--live);
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.55); }
+  70% { box-shadow: 0 0 0 6px rgba(229, 72, 77, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0); }
+}
+
+.stream-info-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+
+.stream-info-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.title-field {
+  flex: 1;
+  min-width: 220px;
+}
+
+.category-field {
+  position: relative;
+  width: 240px;
+}
+
+.stream-info-form input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.stream-info-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.stream-info-form button {
+  background: var(--accent);
+  color: #0b0d0d;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  height: 37px;
+}
+
+.stream-info-form button:hover {
+  background: var(--highlight);
+}
+
+.stream-info-save-row {
+  position: relative;
+}
+
+/* Absolutely positioned rather than a normal flex child — its old spot in
+   the flex-wrap row meant the changing text ("" -> "Speichern…" ->
+   "Gespeichert") changed how the whole row wrapped, visibly reflowing the
+   title/category fields every time you saved. Taken out of flow, it can
+   never affect anything else's layout again.
+
+   Sits above the button as plain text, not a bordered/filled chip — this is
+   a quiet confirmation of something that already happened, not a
+   notification demanding attention the way a toast does. */
+.stream-info-status {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-muted);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+  pointer-events: none;
+}
+
+.stream-info-status.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stream-info-status.is-success {
+  color: var(--accent);
+}
+
+.stream-info-status.is-error {
+  color: #e07a7a;
+}
+
+.category-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 10;
+  max-height: 260px;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.category-results[hidden] {
+  display: none;
+}
+
+.category-results.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.category-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.category-result:hover {
+  background: rgba(53, 201, 168, 0.12);
+}
+
+.category-result img {
+  width: 24px;
+  height: 32px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.columns {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16px;
+  min-height: 0;
+}
+
+.history-panel {
+  order: 1;
+}
+
+.chat-panel {
+  order: 2;
+}
+
+@media (max-width: 800px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--highlight), var(--accent));
+}
+
+.panel-title {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-panel-title {
+  position: relative;
+}
+
+.chatters-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 9px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+}
+
+.chatters-btn:hover {
+  border-color: var(--accent);
+}
+
+.chatters-panel {
+  position: absolute;
+  top: 100%;
+  right: 18px;
+  margin-top: 6px;
+  width: 240px;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 30;
+  /* Same fade+lift treatment as the gear menu and the Verlauf tooltip —
+     see openPanel()/closePanel() in dashboard.js. */
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.chatters-panel.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chatters-panel[hidden] {
+  display: none;
+}
+
+.chatters-search {
+  flex: none;
+  margin: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.chatters-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chatters-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chatters-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 8px 6px 3px;
+}
+
+.chatters-row {
+  padding: 5px 6px;
+  font-size: 12px;
+  border-radius: 5px;
+  color: var(--text);
+}
+
+.chatters-row:hover {
+  background: rgba(53, 201, 168, 0.1);
+}
+
+.chatters-role-broadcaster {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.chatters-role-moderator {
+  color: var(--highlight);
+  font-weight: 600;
+}
+
+.chatters-role-vip {
+  color: var(--accent);
+}
+
+.chatters-role-viewer {
+  color: var(--text-muted);
+}
+
+.chatters-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* --- Chat ----------------------------------------------------------- */
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.chat-message {
+  position: relative;
+  font-size: 15px;
+  line-height: 1.6;
+  word-wrap: break-word;
+  border-radius: 4px;
+}
+
+/* A flat, edge-to-edge background-color read as a literal highlighter box
+   snapping on and off — chat rows have no border/card identity elsewhere
+   (unlike e.g. .history-entry, which already looks like a card), so a solid
+   fill on one made it look like a foreign rectangle had been drawn on top
+   of it. Kept as a plain `@keyframes animation` — same mechanism as
+   history-playing-pulse/live-pulse below, which are known to work — just
+   swapping the flat fill for a blurred inset box-shadow, which paints as
+   part of the row's own background layer (always behind the text, unlike a
+   positioned overlay) and fades out well before the right edge instead of
+   stopping at a hard rectangle. */
+.chat-message--new {
+  animation: chat-message-highlight 5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes chat-message-highlight {
+  0%, 100% { box-shadow: inset 60px 0 30px -20px rgba(53, 201, 168, 0); }
+  10%, 60% { box-shadow: inset 60px 0 30px -20px rgba(53, 201, 168, 0.3); }
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 5px;
+  vertical-align: middle;
+  transform: translateY(-1px);
+}
+
+.badge-broadcaster {
+  background: var(--accent);
+  color: #0b0d0d;
+}
+
+.badge-moderator {
+  border: 1px solid var(--highlight);
+  color: var(--highlight);
+}
+
+.badge-vip {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.badge-subscriber {
+  background: rgba(53, 201, 168, 0.16);
+  color: var(--accent);
+}
+
+.chat-time {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+.chat-username {
+  font-weight: 700;
+}
+
+.chat-colon {
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.chat-emote {
+  height: 26px;
+  vertical-align: middle;
+  margin: -3px 1px;
+}
+
+.mod-controls {
+  position: relative;
+  display: inline-block;
+}
+
+.mod-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.mod-btn:hover {
+  color: var(--accent);
+}
+
+.mod-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  margin-top: 2px;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.mod-menu[hidden] {
+  display: none;
+}
+
+.mod-menu button {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mod-menu button:hover {
+  border-color: var(--accent);
+}
+
+.mod-menu .mod-ban-btn {
+  color: #e07a7a;
+  border-color: rgba(224, 122, 122, 0.4);
+}
+
+.mod-menu .mod-ban-btn:hover {
+  border-color: #e07a7a;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  background: #1b2622;
+  border: 1px solid rgba(224, 122, 122, 0.4);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  max-width: 80%;
+  /* It used to just appear (appendChild) and vanish (remove()) with no
+     transition at all — jarring for something reporting an error. Horizontal
+     centering (translateX) stays constant; only the vertical offset animates. */
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.chat-form {
+  position: relative;
+  flex: none;
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-form #emote-picker-btn {
+  flex: none;
+  width: 37px;
+  height: 37px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text);
+  font-size: 16px;
+  text-transform: none;
+}
+
+.chat-form #emote-picker-btn:hover {
+  border-color: var(--accent);
+  background: rgba(53, 201, 168, 0.1);
+}
+
+.emote-picker {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  /* Rises from the input, so it starts a touch lower (closer to where it's
+     anchored) rather than higher like the drop-down panels. */
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.emote-picker[hidden] {
+  display: none;
+}
+
+.emote-picker.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chat-form .emote-picker-search {
+  flex: none;
+  margin: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.emote-picker-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+
+.emote-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 6px 2px 4px;
+}
+
+.emote-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.emote-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 3px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.emote-grid button:hover {
+  border-color: var(--accent);
+  background: rgba(53, 201, 168, 0.1);
+}
+
+.emote-grid img {
+  max-width: 28px;
+  max-height: 28px;
+  object-fit: contain;
+}
+
+.emote-picker-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chat-form input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.chat-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chat-form button {
+  background: var(--accent);
+  color: #0b0d0d;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chat-form button:hover {
+  background: var(--highlight);
+}
+
+/* Scrollbar for Chat + Verlauf: invisible until you're actually over the
+   panel, styled to match the theme instead of the OS default. Electron's
+   Chromium now also understands the standard scrollbar-color property —
+   setting it here would take over from the ::-webkit-scrollbar-thumb
+   rules below and there's no hover variant for it, so the bar would stay
+   permanently invisible instead of only-hidden-until-hover. Only the
+   -webkit- pseudo-elements support that per-state styling.
+*/
+.chat-messages::-webkit-scrollbar,
+.history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track,
+.history-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb,
+.history-list::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 150ms ease;
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb,
+.history-list:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(53, 201, 168, 0.35);
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.history-list::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(53, 201, 168, 0.6);
+}
+
+/* --- History ---------------------------------------------------------- */
+
+.history-filters {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-filter {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.history-filter:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.history-filter.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b0d0d;
+}
+
+/* Active state per type echoes the icon color scheme above, so the
+   filter you picked and the icons it's now showing read as the same
+   color language. */
+.history-filter[data-filter='subscription'].is-active {
+  background: var(--type-subscription);
+  border-color: var(--type-subscription);
+}
+
+.history-filter[data-filter='cheer'].is-active {
+  background: var(--type-cheer);
+  border-color: var(--type-cheer);
+}
+
+.history-filter[data-filter='raid'].is-active {
+  background: var(--type-raid);
+  border-color: var(--type-raid);
+}
+
+.history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-row);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+
+/* Our own display:flex above otherwise beats the browser's default
+   [hidden]{display:none} — same trap the gift-sub form fields hit
+   earlier. Without this, filtering sets the attribute but nothing
+   actually disappears. */
+.history-entry[hidden] {
+  display: none;
+}
+
+.history-entry.history-entry--pending {
+  background: rgba(114, 227, 197, 0.05);
+  border-color: rgba(114, 227, 197, 0.28);
+  border-style: dashed;
+}
+
+.history-entry.history-entry--playing {
+  background: rgba(53, 201, 168, 0.16);
+  border-color: rgba(53, 201, 168, 0.55);
+  animation: history-playing-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes history-playing-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53, 201, 168, 0.25); }
+  50% { box-shadow: 0 0 0 3px rgba(53, 201, 168, 0.12); }
+}
+
+.history-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.history-status[hidden] {
+  display: none;
+}
+
+.history-entry--pending .history-status {
+  color: var(--highlight);
+  opacity: 0.8;
+}
+
+.history-entry--playing .history-status {
+  color: var(--accent);
+}
+
+.history-entry--pending .history-time {
+  color: var(--highlight);
+  opacity: 0.7;
+}
+
+.history-entry--playing .history-time {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.history-icon {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+
+.history-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Per-type tint so entries are scannable at a glance. Some of the shared
+   icon SVGs (subscription, cheer) bake a low-opacity teal fill directly
+   into the markup — same icons are reused by the overlay card, which
+   should keep its unified brand look, so that fill isn't parameterized
+   there. Overriding `fill` here only touches the Verlauf's copy: CSS
+   always wins over an element's own fill="" attribute. */
+.history-icon[data-type='follow'] {
+  color: var(--type-follow);
+}
+
+.history-icon[data-type='subscription'] {
+  color: var(--type-subscription);
+}
+
+.history-icon[data-type='subscription'] svg {
+  fill: rgba(123, 201, 111, 0.2);
+}
+
+.history-icon[data-type='cheer'] {
+  color: var(--type-cheer);
+}
+
+.history-icon[data-type='cheer'] svg {
+  fill: rgba(217, 167, 92, 0.2);
+}
+
+.history-icon[data-type='raid'] {
+  color: var(--type-raid);
+}
+
+.history-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-detail {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-detail--truncated {
+  cursor: help;
+}
+
+/* Single shared tooltip, repositioned per hover — see dashboard.js. Fade
+   is intentionally the only motion: a couple of CSS properties on one
+   element, no per-row work, so it stays cheap over a long history. */
+.history-tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: #14201c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: normal;
+  word-wrap: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.history-tooltip[hidden] {
+  display: none;
+}
+
+.history-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.history-time {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-muted);
+}

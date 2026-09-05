@@ -1,0 +1,13 @@
+/* Brand tokens shared byte-for-byte across every page (dashboard, control,
+   overlays, settings pages). Deliberately only the values that never vary:
+   --border and --text-muted differ slightly between pages on purpose (an
+   overlay on a transparent background needs a bit more contrast than the
+   dashboard's opaque cards), so those stay defined locally per page instead
+   of being forced into one value here. overlay-music.css has its own
+   bespoke palette (ported from the original YTM overlay design) and is
+   deliberately not part of this file at all. */
+:root {
+  --accent: #35C9A8;
+  --highlight: #72E3C5;
+  --text: #F1F5F3;
+}

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/nav.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="header-right">
+        <div id="status" class="status">Verbinde…</div>
+      </div>
+    </header>
+
+    <div id="subscription-warning" class="subscription-warning" hidden></div>
+
+    <section class="panel stream-info-panel">
+      <div class="panel-title">
+        <span>Stream-Info</span>
+        <div id="live-indicator" class="live-indicator">
+          <span class="live-dot"></span>
+          <span id="live-text">Offline</span>
+        </div>
+      </div>
+      <form id="stream-info-form" class="stream-info-form">
+        <label class="title-field">
+          Titel
+          <input type="text" id="stream-title" maxlength="140" placeholder="Stream-Titel">
+        </label>
+        <label class="category-field">
+          Kategorie
+          <input type="text" id="stream-category" autocomplete="off" placeholder="Kategorie suchen…">
+          <div id="category-results" class="category-results" hidden></div>
+        </label>
+        <div class="stream-info-save-row">
+          <button type="submit">Speichern</button>
+          <span id="stream-info-status" class="stream-info-status" hidden></span>
+        </div>
+      </form>
+    </section>
+
+    <div class="columns">
+      <section class="panel chat-panel">
+        <div class="panel-title chat-panel-title">
+          <span>Chat</span>
+          <button type="button" id="chatters-btn" class="chatters-btn" title="Wer ist im Chat?">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <circle cx="9" cy="8" r="3"/>
+              <path d="M3.5 19c0-3.3 2.6-5.6 5.5-5.6s5.5 2.3 5.5 5.6"/>
+              <circle cx="17" cy="9" r="2.4"/>
+              <path d="M15.5 13.6c2.3.3 4 2.3 4 5.4"/>
+            </svg>
+            <span id="chatters-count">–</span>
+          </button>
+          <div id="chatters-panel" class="chatters-panel" hidden>
+            <input type="text" id="chatters-search" class="chatters-search" placeholder="Suchen…" autocomplete="off">
+            <div id="chatters-list" class="chatters-list"></div>
+          </div>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <form id="chat-form" class="chat-form">
+          <div id="emote-picker" class="emote-picker" hidden>
+            <input type="text" id="emote-picker-search" class="emote-picker-search" placeholder="Emote suchen…" autocomplete="off">
+            <div id="emote-picker-list" class="emote-picker-list"></div>
+          </div>
+          <button type="button" id="emote-picker-btn" class="emote-picker-btn" title="Emotes">☺</button>
+          <input type="text" id="chat-input" placeholder="Nachricht an den Chat…" autocomplete="off">
+          <button type="submit">Senden</button>
+        </form>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-title">Alert Box</div>
+        <div class="history-filters">
+          <button type="button" class="history-filter is-active" data-filter="all">Alle</button>
+          <button type="button" class="history-filter" data-filter="follow">Follow</button>
+          <button type="button" class="history-filter" data-filter="subscription">Sub</button>
+          <button type="button" class="history-filter" data-filter="cheer">Cheer</button>
+          <button type="button" class="history-filter" data-filter="raid">Raid</button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/shared/alert-types.js"></script>
+  <script src="/shared/module-menu.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

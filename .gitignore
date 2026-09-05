@@ -1,0 +1,30 @@
+# Installed dependencies — reproducible from package.json/package-lock.json.
+node_modules/
+
+# Local secrets and per-machine overrides. .env.example stays tracked as
+# the template; every other .env* variant (.env, .env.local, ...) is
+# excluded, since any of them could end up holding real Twitch credentials.
+.env
+.env.*
+!.env.example
+
+# All runtime/local data: encrypted Twitch + YTMDesktop tokens and
+# credentials (data/config.json, data/tokens.json, data/music-tokens.json),
+# the persisted alert/chat history (data/event-history.json — contains
+# viewer usernames and message text), and saved module settings
+# (countdown.json, music-settings.json). None of this belongs in git even
+# though the tokens themselves are encrypted at rest.
+data/
+
+# electron-builder output: packaged .exe builds and the unpacked app
+# folder are machine-specific artifacts, not source.
+dist/
+
+# Log files — none are written inside the project today (packaged builds
+# log to the OS user-data folder instead), but this is cheap insurance
+# against a stray one ending up here.
+*.log
+
+# Common OS-generated clutter.
+.DS_Store
+Thumbs.db

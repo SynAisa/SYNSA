@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Countdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Countdown</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
+    </header>
+
+    <p class="hint">
+      "Starting Soon"-Countdown für OBS. Dauer eingeben und starten — die
+      Overlay-Quelle zählt live mit, egal wann sie geladen wird.
+    </p>
+
+    <form id="countdown-form" class="card">
+      <div class="card-title">Einstellungen</div>
+
+      <label class="countdown-duration-label">
+        Dauer
+        <div class="countdown-duration-row">
+          <input type="number" id="countdown-minutes" min="0" max="1439" value="10"> <span>Min.</span>
+          <input type="number" id="countdown-seconds" min="0" max="59" value="0"> <span>Sek.</span>
+        </div>
+      </label>
+
+      <div class="countdown-presets">
+        <button type="button" class="countdown-preset-btn" data-minutes="5">5 Min</button>
+        <button type="button" class="countdown-preset-btn" data-minutes="10">10 Min</button>
+        <button type="button" class="countdown-preset-btn" data-minutes="15">15 Min</button>
+        <button type="button" class="countdown-preset-btn" data-minutes="30">30 Min</button>
+      </div>
+
+      <label>
+        Anzeigetext
+        <input type="text" id="countdown-label" maxlength="60" placeholder="Starting Soon">
+      </label>
+
+      <div class="countdown-row-fields">
+        <label class="countdown-color-label">
+          Akzentfarbe
+          <div class="color-hex-row">
+            <input type="color" id="countdown-color" value="#35C9A8">
+            <input type="text" id="countdown-color-hex" class="color-hex-input" value="#35C9A8" maxlength="7" spellcheck="false" autocomplete="off">
+          </div>
+        </label>
+
+        <label>
+          Schriftgröße
+          <select id="countdown-fontsize">
+            <option value="small">Klein</option>
+            <option value="medium" selected>Mittel</option>
+            <option value="large">Groß</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="countdown-actions">
+        <button type="submit" id="countdown-start-btn">Starten</button>
+        <button type="button" id="countdown-stop-btn" hidden>Stoppen</button>
+        <span id="countdown-live" class="countdown-live"></span>
+      </div>
+    </form>
+
+    <div class="card">
+      <div class="card-title">Vorschau</div>
+      <div class="countdown-preview-box" id="countdown-preview-box">
+        <div class="countdown-preview-label" id="countdown-preview-label">Starting Soon</div>
+        <div class="countdown-preview-value" id="countdown-preview-value">10:00</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overlay-URL</div>
+      <p class="hint" style="margin-bottom: 0;">
+        Als OBS Browser Source:
+        <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay-countdown.html">
+          <code class="reveal-copy-value"></code>
+          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <script src="/shared/module-menu.js"></script>
+  <script src="/shared/reveal-copy.js"></script>
+  <script src="/js/countdown-settings.js"></script>
+</body>
+</html>

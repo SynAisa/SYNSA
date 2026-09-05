@@ -1,0 +1,260 @@
+:root {
+  --bg: rgba(16, 18, 18, 0.86);
+  --border: rgba(53, 201, 168, 0.32);
+  --text-muted: rgba(241, 245, 243, 0.62);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+/* Only shown outside OBS, so the transparent overlay is easy to preview
+   in a normal browser tab. */
+body.preview-mode {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(53, 201, 168, 0.08), transparent 45%),
+    #0b0d0d;
+}
+
+.preview-badge {
+  display: none;
+  position: fixed;
+  left: 16px;
+  bottom: 14px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(241, 245, 243, 0.35);
+  font-family: 'Inter', sans-serif;
+}
+
+body.preview-mode .preview-badge {
+  display: block;
+}
+
+/* Preview only, on purpose. In OBS the Browser Source is transparent and
+   the video behind it is composited by OBS, not by the page — so there is
+   nothing in the page for backdrop-filter to blur, and it would just cost
+   compositing work every frame for no visible result. Here it blurs the
+   preview background, which is real. */
+body.preview-mode .alert-card {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.sound-unlock {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 14px;
+  padding: 8px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  background: rgba(53, 201, 168, 0.14);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sound-unlock:hover {
+  background: rgba(53, 201, 168, 0.22);
+}
+
+body.preview-mode .sound-unlock:not([hidden]) {
+  display: block;
+}
+
+#alert-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.alert-card {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  width: 440px;
+  padding: 18px 24px 18px 20px;
+  display: flex;
+  /* Long resub/cheer messages wrap the detail line onto several lines —
+     center-aligning the icon would leave it floating oddly once the card
+     is no longer single-line tall. */
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  opacity: 0;
+  transform: translate(-50%, 22px) scale(0.97);
+}
+
+.alert-card[hidden] {
+  display: none;
+}
+
+.alert-card.is-visible {
+  animation: card-in 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.alert-card.is-leaving {
+  animation: card-out 420ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes card-in {
+  0% { opacity: 0; transform: translate(-50%, 22px) scale(0.97); }
+  60% { opacity: 1; transform: translate(-50%, -4px) scale(1.008); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+@keyframes card-out {
+  0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -14px) scale(0.98); }
+}
+
+.ink-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 48%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+  animation: ink-drift 7s ease-in-out infinite alternate;
+}
+
+.is-visible .ink-accent {
+  opacity: 1;
+  transition: opacity 900ms ease 200ms;
+}
+
+@keyframes ink-drift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.55; }
+  100% { transform: translate(-4px, 3px) scale(1.04); opacity: 0.85; }
+}
+
+.accent-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--highlight), var(--accent));
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+.is-visible .accent-stripe {
+  animation: stripe-draw 520ms cubic-bezier(0.22, 1, 0.36, 1) 90ms forwards;
+}
+
+@keyframes stripe-draw {
+  to { transform: scaleY(1); }
+}
+
+.icon-slot {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(53, 201, 168, 0.12);
+  border: 1px solid rgba(53, 201, 168, 0.4);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.icon-slot svg {
+  width: 22px;
+  height: 22px;
+}
+
+.is-visible .icon-slot {
+  animation: icon-in 480ms cubic-bezier(0.34, 1.4, 0.4, 1) 160ms forwards;
+}
+
+@keyframes icon-in {
+  to { opacity: 1; transform: scale(1); }
+}
+
+.alert-content {
+  position: relative;
+  min-width: 0;
+}
+
+.alert-type,
+.alert-username,
+.alert-detail {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.is-visible .alert-type {
+  animation: text-in 420ms ease 210ms forwards;
+}
+
+.is-visible .alert-username {
+  animation: text-in 420ms ease 290ms forwards;
+}
+
+.is-visible .alert-detail {
+  animation: text-in 420ms ease 370ms forwards;
+}
+
+@keyframes text-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alert-type {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.alert-username {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alert-detail {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.5;
+  /* The overlay shows the full message text (unlike the dashboard's
+     Verlauf, which truncates with a hover tooltip) — viewers can't hover
+     over a video, so on-stream it has to just be readable outright. Long
+     resub/cheer messages wrap the card taller instead of cutting off. */
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.alert-detail:empty {
+  display: none;
+}

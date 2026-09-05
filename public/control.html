@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Control Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>SYNSA</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
+    </header>
+
+    <p class="hint">
+      Overlay als OBS Browser Source:
+      <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay.html">
+        <code class="reveal-copy-value"></code>
+        <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+        <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+      </span>
+      &nbsp;·&nbsp; Größe/Transparenz wird automatisch erkannt.
+    </p>
+
+    <div class="card twitch-card">
+      <div class="card-title">Twitch</div>
+      <div class="twitch-row">
+        <span id="twitch-status" class="twitch-status">Nicht verbunden</span>
+        <a id="twitch-connect" class="twitch-connect" href="/auth/twitch/login">Mit Twitch verbinden</a>
+        <form id="twitch-disconnect-form" action="/auth/twitch/logout" method="post" hidden>
+          <button type="submit" class="twitch-disconnect">Trennen</button>
+        </form>
+      </div>
+      <div id="twitch-session" class="twitch-session" hidden>
+        Session:
+        <span id="twitch-session-reveal" class="reveal-copy" data-reveal-copy data-value="">
+          <code class="reveal-copy-value"></code>
+          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+        </span>
+      </div>
+    </div>
+
+    <div class="card volume-card">
+      <div class="card-title">Master Volume</div>
+      <div class="volume-row">
+        <input type="range" id="volume-slider" min="0" max="100" value="60">
+        <span id="volume-value">60%</span>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <form id="follow-form" class="card">
+        <div class="card-title-row">
+          <div class="card-title">Follow</div>
+          <button type="button" class="sound-preview-btn" data-type="follow" title="Sound testen">🔊</button>
+        </div>
+        <label>
+          Username
+          <input type="text" id="follow-username" placeholder="zufällig, wenn leer">
+        </label>
+        <button type="submit">Follow-Alert senden</button>
+      </form>
+
+      <form id="sub-form" class="card">
+        <div class="card-title-row">
+          <div class="card-title">Subscription</div>
+          <button type="button" class="sound-preview-btn" data-type="subscription" title="Sound testen">🔊</button>
+        </div>
+        <label>
+          <span id="sub-username-label">Username</span>
+          <input type="text" id="sub-username" placeholder="zufällig, wenn leer">
+        </label>
+
+        <label>
+          Tier
+          <select id="sub-tier">
+            <option value="1000">Tier 1</option>
+            <option value="2000">Tier 2</option>
+            <option value="3000">Tier 3</option>
+            <option value="prime">Prime</option>
+          </select>
+        </label>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="sub-isgift">
+          Gift Sub
+        </label>
+
+        <div id="resub-fields">
+          <label>
+            Monate (Resub)
+            <input type="number" id="sub-months" min="1" value="1">
+          </label>
+          <label>
+            Nachricht (optional, max. 500 Zeichen)
+            <input type="text" id="sub-message" maxlength="500" placeholder="z.B. Danke für 8 tolle Monate!">
+          </label>
+        </div>
+
+        <div id="gift-fields" hidden>
+          <label>
+            Anzahl Gifts
+            <input type="number" id="sub-giftcount" min="1" value="1">
+          </label>
+        </div>
+
+        <button type="submit">Subscription-Alert senden</button>
+      </form>
+
+      <form id="cheer-form" class="card">
+        <div class="card-title-row">
+          <div class="card-title">Cheer</div>
+          <button type="button" class="sound-preview-btn" data-type="cheer" title="Sound testen">🔊</button>
+        </div>
+        <label>
+          Username
+          <input type="text" id="cheer-username" placeholder="zufällig, wenn leer">
+        </label>
+        <label>
+          Bits
+          <input type="number" id="cheer-bits" min="1" value="100">
+        </label>
+        <label>
+          Nachricht (optional)
+          <input type="text" id="cheer-message" placeholder="z.B. Nice stream!">
+        </label>
+        <button type="submit">Cheer-Alert senden</button>
+      </form>
+
+      <form id="raid-form" class="card">
+        <div class="card-title-row">
+          <div class="card-title">Raid</div>
+          <button type="button" class="sound-preview-btn" data-type="raid" title="Sound testen">🔊</button>
+        </div>
+        <label>
+          Kanal
+          <input type="text" id="raid-username" placeholder="zufällig, wenn leer">
+        </label>
+        <label>
+          Zuschauer
+          <input type="number" id="raid-viewers" min="1" value="25">
+        </label>
+        <button type="submit">Raid-Alert senden</button>
+      </form>
+    </div>
+
+    <section class="log-section">
+      <div class="card-title">Alert Box</div>
+      <div id="event-log" class="event-log"></div>
+    </section>
+  </div>
+
+  <script src="/shared/alert-types.js"></script>
+  <script src="/shared/module-menu.js"></script>
+  <script src="/shared/reveal-copy.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/control.js"></script>
+</body>
+</html>

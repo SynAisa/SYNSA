@@ -1,0 +1,302 @@
+const path = require('path');
+const fs = require('fs');
+const { app, BrowserWindow, Tray, Menu, dialog, shell, clipboard, Notification, nativeImage } = require('electron');
+
+const PORT = process.env.PORT || 4242;
+const BASE_URL = `http://localhost:${PORT}`;
+
+// Only one copy of the server should ever be running at once.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+
+// Renaming the app to SYNSA moves Electron's userData folder, and that is
+// not just where files live: Chromium keeps the key that safeStorage
+// encrypts with in "Local State" *inside* that folder. A new folder means a
+// newly generated key, so every previously encrypted file — Twitch tokens,
+// client credentials, the YTMDesktop pairing — becomes undecryptable even
+// though the files themselves are untouched. Carrying the old key across is
+// what actually makes the rename non-destructive; copying data/ alone is
+// not enough. Runs before anything can touch safeStorage.
+function migrateFromLegacyName() {
+  const userDataDir = app.getPath('userData');
+  const marker = path.join(userDataDir, '.synsa-migrated');
+  if (fs.existsSync(marker)) return;
+
+  // Electron derived these from package.json: "Stream Alerts" for the
+  // packaged build (productName), "stream-alerts" for `npm run electron`.
+  const legacyName = app.isPackaged ? 'Stream Alerts' : 'stream-alerts';
+  const legacyDir = path.join(path.dirname(userDataDir), legacyName);
+  if (!fs.existsSync(legacyDir)) return;
+
+  try {
+    fs.mkdirSync(userDataDir, { recursive: true });
+
+    const legacyKey = path.join(legacyDir, 'Local State');
+    if (fs.existsSync(legacyKey)) {
+      fs.copyFileSync(legacyKey, path.join(userDataDir, 'Local State'));
+      console.log('Migrated encryption key from the previous app folder.');
+    }
+
+    // Only the packaged build keeps its data inside userData; the dev flow
+    // reads <project>/data, which the rename never moved.
+    if (app.isPackaged) {
+      const legacyData = path.join(legacyDir, 'data');
+      const newData = path.join(userDataDir, 'data');
+      if (fs.existsSync(legacyData) && !fs.existsSync(newData)) {
+        fs.cpSync(legacyData, newData, { recursive: true });
+        console.log('Migrated existing data folder.');
+      }
+    }
+
+    fs.writeFileSync(marker, new Date().toISOString());
+  } catch (err) {
+    console.error('Migration from the previous app folder failed:', err.message);
+  }
+}
+
+// Packaged .exe: keep runtime data (credentials, Twitch tokens, event
+// history) in the user's own writable profile folder rather than next to
+// a possibly read-only install location. Must be set before requiring
+// server.js. A .env next to the .exe still works as an optional override
+// for anyone who prefers it, but is no longer required — the app asks for
+// the Twitch credentials on first run instead.
+migrateFromLegacyName();
+
+if (app.isPackaged) {
+  process.env.SYNSA_DATA_DIR = path.join(app.getPath('userData'), 'data');
+
+  // The portable build self-extracts and runs from a temp folder, so
+  // app.getPath('exe') points there, not to the real .exe; electron-builder
+  // sets PORTABLE_EXECUTABLE_DIR to the actual location instead.
+  const exeDir = process.env.PORTABLE_EXECUTABLE_DIR || path.dirname(app.getPath('exe'));
+  require('dotenv').config({ path: path.join(exeDir, '.env') });
+
+  setupFileLogging();
+} else {
+  // Dev only: watching the packaged .exe would be pointless (it's a
+  // frozen snapshot), but during `npm run electron` this restarts the
+  // whole app automatically whenever server.js, twitch/, electron/, or
+  // public/ change — no more manually killing and relaunching after
+  // every edit. data/ and dist/ are deliberately not watched: they
+  // change on their own (event history, chat log, build output) and
+  // would otherwise restart the app in a loop.
+  try {
+    require('electron-reload')(
+      [
+        path.join(__dirname, '..', 'server.js'),
+        path.join(__dirname, '..', 'twitch'),
+        path.join(__dirname, '..', 'music'),
+        path.join(__dirname, '..', 'public'),
+        __dirname,
+      ],
+      {
+        electron: path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron.exe'),
+        hardResetMethod: 'exit',
+        // Without this, electron-reload only soft-reloads open windows on
+        // a change and reserves the actual process restart for edits to
+        // this file alone — useless for a project that's mostly backend.
+        forceHardReset: true,
+      }
+    );
+  } catch (err) {
+    console.warn('electron-reload not active:', err.message);
+  }
+}
+
+let mainWindow = null;
+let isQuitting = false;
+
+app.whenReady().then(async () => {
+  Menu.setApplicationMenu(null);
+
+  const server = require(path.join(__dirname, '..', 'server.js'));
+
+  try {
+    await server.ready;
+  } catch (err) {
+    const message =
+      err.code === 'EADDRINUSE'
+        ? `Port ${PORT} ist bereits belegt. Läuft SYNSA vielleicht schon (Tray-Icon prüfen) oder blockiert ein anderes Programm den Port?`
+        : `Der lokale Server konnte nicht gestartet werden:\n\n${err.message}`;
+    dialog.showErrorBox('SYNSA', message);
+    app.exit(1);
+    return;
+  }
+
+  createTray();
+
+  // First run has no Twitch credentials yet — take the user straight to
+  // the setup page instead of a dashboard that cannot work.
+  const { isConfigured } = require(path.join(__dirname, '..', 'twitch', 'appConfig.js'));
+  if (!isConfigured()) {
+    openAppWindow('setup.html');
+  }
+});
+
+// Double-clicking the .exe again shouldn't look like nothing happened.
+app.on('second-instance', () => {
+  openAppWindow('dashboard.html');
+});
+
+app.on('window-all-closed', (e) => {
+  // The window hides instead of closing (see openAppWindow) — this is a
+  // fallback and should rarely fire. Either way, stay alive in the tray.
+  e.preventDefault();
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
+function setupFileLogging() {
+  const logPath = path.join(app.getPath('userData'), 'synsa.log');
+  fs.mkdirSync(path.dirname(logPath), { recursive: true });
+  const stream = fs.createWriteStream(logPath, { flags: 'a' });
+
+  for (const method of ['log', 'error', 'warn']) {
+    const original = console[method].bind(console);
+    console[method] = (...args) => {
+      original(...args);
+      stream.write(`[${new Date().toISOString()}] ${args.map(String).join(' ')}\n`);
+    };
+  }
+}
+
+// Dashboard and Control Panel already link to each other with plain
+// <a href> tags, so a single reused window just navigates between them —
+// no need for two separate windows.
+function openAppWindow(pagePath) {
+  const url = `${BASE_URL}/${pagePath}`;
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.loadURL(url);
+    mainWindow.show();
+    mainWindow.focus();
+    return;
+  }
+
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 820,
+    minWidth: 720,
+    minHeight: 500,
+    backgroundColor: '#0b0d0d',
+    autoHideMenuBar: true,
+    title: `SYNSA v${app.getVersion()}`,
+    // Without this the taskbar/Alt-Tab icon falls back to Electron's own
+    // logo — same teal-circle icon the tray already uses.
+    icon: path.join(__dirname, 'assets', 'tray-icon.png'),
+    webPreferences: {
+      // The pages are plain web pages talking to localhost over HTTP —
+      // they never need Node, so don't hand it to them.
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  mainWindow.loadURL(url);
+
+  // Each page sets its own <title> (e.g. "SYNSA · Dashboard"), which would
+  // otherwise silently drop the version the instant that page finishes
+  // loading. Appending it here instead of setting it once keeps it visible
+  // no matter which page is open.
+  mainWindow.on('page-title-updated', (event, title) => {
+    event.preventDefault();
+    mainWindow.setTitle(`${title} — v${app.getVersion()}`);
+  });
+
+  // Twitch (like most OAuth providers) refuses to log in inside an
+  // embedded/app browser window — it needs to happen in the user's real
+  // browser. The callback still lands back on our own localhost server
+  // either way, so the app window picks up the "connected" state live
+  // over the WebSocket without needing to navigate anywhere itself.
+  const sendExternal = (event, targetUrl) => {
+    if (!targetUrl.startsWith(BASE_URL)) {
+      event.preventDefault();
+      shell.openExternal(targetUrl);
+    }
+  };
+
+  mainWindow.webContents.on('will-navigate', sendExternal);
+
+  // Clicking "Mit Twitch verbinden" navigates to our own /auth/twitch/login
+  // first (allowed above), which then answers with an HTTP redirect to
+  // Twitch — that's a *redirect*, not a fresh navigation, so it needs its
+  // own handler.
+  mainWindow.webContents.on('will-redirect', sendExternal);
+
+  mainWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
+    if (!targetUrl.startsWith(BASE_URL)) {
+      shell.openExternal(targetUrl);
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+function createTray() {
+  const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray-icon.png'));
+  const tray = new Tray(icon);
+  tray.setToolTip(`SYNSA v${app.getVersion()}`);
+
+  const menu = Menu.buildFromTemplate([
+    { label: 'Dashboard öffnen', click: () => openAppWindow('dashboard.html') },
+    { label: 'Control-Panel öffnen', click: () => openAppWindow('control.html') },
+    { label: 'Music-Overlay-Einstellungen öffnen', click: () => openAppWindow('music-settings.html') },
+    { label: 'Countdown-Einstellungen öffnen', click: () => openAppWindow('countdown-settings.html') },
+    { type: 'separator' },
+    {
+      label: 'Overlay-URL kopieren',
+      click: () => {
+        clipboard.writeText(`${BASE_URL}/overlay.html`);
+        notify('Overlay-URL kopiert', `${BASE_URL}/overlay.html`);
+      },
+    },
+    {
+      label: 'Music-Overlay-URL kopieren',
+      click: () => {
+        clipboard.writeText(`${BASE_URL}/overlay-music.html`);
+        notify('Music-Overlay-URL kopiert', `${BASE_URL}/overlay-music.html`);
+      },
+    },
+    {
+      label: 'Countdown-Overlay-URL kopieren',
+      click: () => {
+        clipboard.writeText(`${BASE_URL}/overlay-countdown.html`);
+        notify('Countdown-Overlay-URL kopiert', `${BASE_URL}/overlay-countdown.html`);
+      },
+    },
+    { label: 'Twitch-Zugangsdaten ändern', click: () => openAppWindow('setup.html') },
+    ...(app.isPackaged
+      ? [
+          {
+            label: 'Log-Datei öffnen',
+            click: () => shell.openPath(path.join(app.getPath('userData'), 'synsa.log')),
+          },
+        ]
+      : []),
+    { type: 'separator' },
+    { label: 'Beenden', click: () => app.quit() },
+  ]);
+
+  tray.setContextMenu(menu);
+  tray.on('click', () => openAppWindow('dashboard.html'));
+}
+
+function notify(title, body) {
+  if (Notification.isSupported()) {
+    new Notification({ title, body }).show();
+  }
+}

@@ -1,0 +1,67 @@
+:root {
+  /* Pre-mixed by JS from --accent. It used to be color-mix(), which needs
+     Chromium 111+ — older OBS builds ship older CEF and would have dropped
+     the whole text-shadow without a word. */
+  --accent-glow: rgba(53, 201, 168, 0.65);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+#countdown-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+#countdown-root[hidden] {
+  display: none;
+}
+
+#countdown-label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+#countdown-value {
+  font-size: 72px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 28px var(--accent-glow);
+}
+
+#countdown-root.size-small #countdown-value { font-size: 44px; }
+#countdown-root.size-medium #countdown-value { font-size: 72px; }
+#countdown-root.size-large #countdown-value { font-size: 108px; }
+
+#countdown-root.size-small #countdown-label { font-size: 14px; }
+#countdown-root.size-large #countdown-label { font-size: 24px; }
+
+#countdown-root.is-done {
+  animation: countdown-blink 2.4s ease-in-out infinite;
+}
+
+@keyframes countdown-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
