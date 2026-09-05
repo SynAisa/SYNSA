@@ -2,6 +2,11 @@
   "name": "synsa",
   "version": "0.1.0",
   "description": "SYNSA — local Twitch stream toolkit: alert overlays, chat dashboard, now-playing and countdown modules for OBS.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SynAisa/SYNSA.git"
+  },
   "main": "electron/main.js",
   "scripts": {
     "start": "node server.js",
