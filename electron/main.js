@@ -110,16 +110,27 @@ let isQuitting = false;
 
 const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
 
-// Phase 2A: no real second build exists to install yet (see the local test
-// provider), so "installing" here means honestly restarting the current
-// installation rather than faking a version change. A real Phase 2B
-// provider would instead hand back a downloaded installer for
-// quitAndInstall()-style logic — this callback is the one place that will
-// need to change for that.
-update.setInstallHandler(() => {
-  app.relaunch();
-  app.exit(0);
-});
+// Same selector update/manager.js uses to pick its provider — kept here in
+// sync (rather than asking manager.js which provider it loaded) because
+// only this file, the real Electron main process, is allowed to know
+// anything about electron-updater at all. update/manager.js and every
+// renderer page stay completely unaware of which provider is active.
+const USE_PRODUCTION_UPDATE_PROVIDER = process.env.SYNSA_UPDATE_PROVIDER === 'production';
+
+if (USE_PRODUCTION_UPDATE_PROVIDER) {
+  // A real downloaded update needs electron-updater's own quit-and-run-the-
+  // installer sequence, not a bare restart of the still-current binary.
+  const productionProvider = require(path.join(__dirname, '..', 'update', 'productionProvider.js'));
+  update.setInstallHandler(() => productionProvider.quitAndInstall());
+} else {
+  // Phase 2A: no real second build exists to install yet (see the local
+  // test provider), so "installing" here means honestly restarting the
+  // current installation rather than faking a version change.
+  update.setInstallHandler(() => {
+    app.relaunch();
+    app.exit(0);
+  });
+}
 
 // Runs once per app start. No native dialog and no window management here
 // on purpose: an earlier version showed a dialog.showMessageBoxSync popup

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.5",
+    "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "socket.io-client": "^4.8.3",
     "ws": "^8.18.0"
@@ -31,7 +32,7 @@
       "update/**/*",
       "public/**/*",
       "package.json",
-      "!node_modules/electron*/**"
+      "!node_modules/electron/**"
     ],
     "win": {
       "target": "nsis",
@@ -48,6 +49,11 @@
       "deleteAppDataOnUninstall": false,
       "artifactName": "SYNSA Setup ${version}.exe",
       "include": "build/installer.nsh"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "SynAisa",
+      "repo": "SYNSA"
     }
   },
   "allowScripts": {

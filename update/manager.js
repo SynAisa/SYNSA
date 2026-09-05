@@ -10,16 +10,20 @@
 //   download(release, onProgress) -> Promise<void>
 //     onProgress is called with { downloadedBytes, totalBytes, percent }
 //
-// A future ProductionProvider (Phase 2B, e.g. backed by GitHub Releases)
-// only needs to implement that same contract and be swapped in below —
-// nothing else in this file, server.js, electron/main.js, or the renderer
-// pages needs to change.
+// PHASE 2B: which provider backs UpdateManager is selected once, at
+// require time, via SYNSA_UPDATE_PROVIDER — "production" uses
+// update/productionProvider.js (electron-updater against the real public
+// SynAisa/SYNSA GitHub repo); anything else, including unset, keeps the
+// Phase 2A update/localTestProvider.js so existing dev/test workflows are
+// completely unaffected by default. Either way, this file never changes:
+// both providers implement the exact same contract —
+//   checkForUpdate() -> Promise<{ version, type, notes, sizeBytes } | null>
+//   download(release, onProgress) -> Promise<void>
+//     onProgress is called with { downloadedBytes, totalBytes, percent }
 const { isNewerVersion } = require('./versionCompare');
 
-// PHASE 2A: local test provider only. See localTestProvider.js — it makes
-// no network requests and cannot become a production update source by
-// accident; there is simply nothing else wired in yet.
-const provider = require('./localTestProvider');
+const provider =
+  process.env.SYNSA_UPDATE_PROVIDER === 'production' ? require('./productionProvider') : require('./localTestProvider');
 
 const PHASES = {
   IDLE: 'idle',
