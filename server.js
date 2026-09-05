@@ -6,7 +6,7 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 
 const twitchConfig = require('./twitch/config');
-const appConfig = require('./twitch/appConfig');
+const deviceAuth = require('./twitch/deviceAuth');
 const tokenStore = require('./twitch/tokenStore');
 const helix = require('./twitch/helix');
 const eventsub = require('./twitch/eventsub');
@@ -17,6 +17,7 @@ const music = require('./music/companion');
 const update = require('./update/manager');
 const welcomeState = require('./update/welcomeState');
 const releaseNotes = require('./update/releaseNotes');
+const updateRepository = require('./update/repository');
 
 const PORT = process.env.PORT || 4242;
 
@@ -357,6 +358,13 @@ function recordChatMessage(message) {
   broadcast({ kind: 'chat-message', message });
 }
 
+// Once the user approves in their browser, the device flow finishes the same
+// way the old OAuth callback did: bring Twitch up right away rather than
+// waiting for the next restart.
+deviceAuth.init({
+  onConnected: () => eventsub.start(),
+});
+
 eventsub.init({
   onAlert: (alert) => recordAlert(alert),
   onChat: (message) => recordChatMessage(message),
@@ -421,30 +429,10 @@ update.onChange((updateState) => {
   broadcast({ kind: 'update-status', status: updateState });
 });
 
-// --- Twitch OAuth (Authorization Code flow) -------------------------------
-
-// A single slot meant a second login attempt invalidated the first, so
-// whichever tab the user actually completed could fail with "invalid
-// state". Several may now be in flight; each is single-use and expires.
-const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const pendingOAuthStates = new Map();
-
-function issueOAuthState() {
-  const value = crypto.randomBytes(16).toString('hex');
-  const cutoff = Date.now() - OAUTH_STATE_TTL_MS;
-  for (const [existing, createdAt] of pendingOAuthStates) {
-    if (createdAt < cutoff) pendingOAuthStates.delete(existing);
-  }
-  pendingOAuthStates.set(value, Date.now());
-  return value;
-}
-
-function consumeOAuthState(value) {
-  if (typeof value !== 'string' || !pendingOAuthStates.has(value)) return false;
-  const createdAt = pendingOAuthStates.get(value);
-  pendingOAuthStates.delete(value);
-  return Date.now() - createdAt < OAUTH_STATE_TTL_MS;
-}
+// The authorization code flow (and with it the OAuth state bookkeeping that
+// protected its redirect) is gone: SYNSA links a Twitch account through the
+// device code flow now, which never redirects back and therefore has no
+// state parameter to guard. See twitch/deviceAuth.js.
 
 // Single source of truth for the version shown in the UI (module menu,
 // window title) — reads package.json rather than duplicating the number.
@@ -506,9 +494,10 @@ app.post('/api/welcome/seen', (req, res) => {
 
 // The changelog box on the welcome screen. GitHub's release list is the
 // single source of truth — the same release bodies the update banner already
-// shows — so there is no second changelog file to keep in sync. Owner and
-// repo come from the publish configuration rather than being written out
-// again here.
+// shows — so there is no second changelog file to keep in sync. Which
+// repository that is comes from update/repository.js, shared with the update
+// provider (and explicitly not from package.json's build block, which
+// electron-builder removes when packaging).
 const CHANGELOG_CACHE_MS = 15 * 60 * 1000;
 const CHANGELOG_TIMEOUT_MS = 8000;
 const CHANGELOG_LIMIT = 10;
@@ -521,9 +510,8 @@ app.get('/api/changelog', async (req, res) => {
     return;
   }
 
-  const { owner, repo } = require('./package.json').build.publish;
-
   try {
+    const { owner, repo } = updateRepository;
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=${CHANGELOG_LIMIT}`, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'SYNSA' },
       signal: AbortSignal.timeout(CHANGELOG_TIMEOUT_MS),
@@ -559,85 +547,50 @@ app.get('/api/changelog', async (req, res) => {
   }
 });
 
-// --- First-run setup (Twitch app credentials) ------------------------------
+// --- First-run setup (linking the Twitch account) --------------------------
 
+// What the setup screen needs to know: whether an account is linked, and
+// whether SYNSA can start a device flow at all. No credentials are entered
+// here anymore — see twitch/deviceAuth.js for why that step disappeared.
 app.get('/api/setup/status', (req, res) => {
-  res.json({ configured: appConfig.isConfigured(), redirectUri: twitchConfig.redirectUri });
-});
-
-app.post('/api/setup/credentials', (req, res) => {
-  const clientId = typeof req.body.clientId === 'string' ? req.body.clientId : '';
-  const clientSecret = typeof req.body.clientSecret === 'string' ? req.body.clientSecret : '';
-
-  if (!clientId.trim() || !clientSecret.trim()) {
-    res.status(400).json({ error: 'Client ID und Client Secret werden beide benötigt.' });
-    return;
-  }
-
-  try {
-    appConfig.saveCredentials({ clientId, clientSecret });
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('Could not save credentials:', err.message);
-    res.status(500).json({ error: err.message });
-    return;
-  }
-
-  // Tokens from a previous run stay valid across a credential re-entry, so
-  // reconnect right away instead of making the user log in again.
-  if (tokenStore.load()) {
-    eventsub.start().catch((err) => {
-      console.error('Could not start Twitch EventSub after setup:', err.message);
-    });
-  }
-});
-
-app.get('/auth/twitch/login', (req, res) => {
-  if (!appConfig.isConfigured()) {
-    res.redirect('/setup.html');
-    return;
-  }
-
-  const params = new URLSearchParams({
-    client_id: twitchConfig.clientId,
-    redirect_uri: twitchConfig.redirectUri,
-    response_type: 'code',
-    scope: twitchConfig.scopes.join(' '),
-    state: issueOAuthState(),
-    force_verify: 'true',
+  res.json({
+    connected: Boolean(tokenStore.load()),
+    hasClientId: twitchConfig.hasClientId,
+    scopes: twitchConfig.scopes,
   });
-
-  res.redirect(`https://id.twitch.tv/oauth2/authorize?${params}`);
 });
 
-app.get('/auth/twitch/callback', async (req, res) => {
-  const { code, state: returnedState, error, error_description: errorDescription } = req.query;
-
-  if (error) {
-    res.status(400).send(`Twitch-Autorisierung abgelehnt: ${errorDescription || error}`);
-    return;
-  }
-
-  if (!consumeOAuthState(returnedState)) {
-    res.status(400).send('Ungültiger OAuth-State. Bitte den Login erneut starten.');
-    return;
-  }
-
+// Starts the device flow: answers with the short code and the Twitch page
+// the user has to open. The polling itself runs in twitch/deviceAuth.js, so
+// the connection still completes if this page is closed in the meantime.
+app.post('/api/twitch/device/start', async (req, res) => {
   try {
-    const tokenResponse = await helix.exchangeCode(code);
-    tokenStore.save({
-      accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token,
-    });
-    await eventsub.start();
-    res.redirect('/control.html?twitch=connected');
+    res.json(await deviceAuth.start());
   } catch (err) {
-    console.error('Twitch OAuth callback failed:', err);
-    res.status(500).send('Login fehlgeschlagen. Details stehen in der Server-Konsole.');
+    console.error('Could not start the Twitch device flow:', err.message);
+    res.status(502).json({ status: 'error', error: 'Twitch ist gerade nicht erreichbar.' });
   }
+});
+
+app.get('/api/twitch/device/status', (req, res) => {
+  res.json(deviceAuth.getState());
+});
+
+app.post('/api/twitch/device/cancel', (req, res) => {
+  res.json(deviceAuth.cancel());
+});
+
+// Anything still pointing at the old login route (a bookmark, an older page
+// kept open) lands on the setup screen, which is where linking an account
+// happens now.
+app.get('/auth/twitch/login', (req, res) => {
+  res.redirect('/setup.html');
 });
 
 app.post('/auth/twitch/logout', (req, res) => {
+  // Also drops a device flow that may still be waiting for approval —
+  // otherwise it could reconnect the account moments after disconnecting it.
+  deviceAuth.cancel();
   eventsub.stop();
   tokenStore.clear();
   res.redirect('/control.html');

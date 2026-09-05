@@ -4,26 +4,14 @@ const tokenStore = require('./tokenStore');
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const HELIX_URL = 'https://api.twitch.tv/helix';
 
-async function exchangeCode(code) {
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    client_secret: config.clientSecret,
-    code,
-    grant_type: 'authorization_code',
-    redirect_uri: config.redirectUri,
-  });
-
-  const res = await fetch(TOKEN_URL, { method: 'POST', body: params });
-  if (!res.ok) {
-    throw new Error(`Token exchange failed: ${res.status} ${await res.text()}`);
-  }
-  return res.json();
-}
-
+// No client_secret: SYNSA is registered with Twitch as a public client, and
+// public clients refresh without one (see twitch/deviceAuth.js for why there
+// is no secret anywhere anymore). Everything else about refreshing is
+// unchanged — including that Twitch hands back a new refresh token every
+// time, which the caller below stores.
 async function refreshAccessToken(refreshToken) {
   const params = new URLSearchParams({
     client_id: config.clientId,
-    client_secret: config.clientSecret,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   });
@@ -345,7 +333,6 @@ async function deleteDisconnectedSubscriptions() {
 }
 
 module.exports = {
-  exchangeCode,
   deleteDisconnectedSubscriptions,
   refreshAccessToken,
   helixFetch,

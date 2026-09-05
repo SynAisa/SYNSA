@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/theme.css">
 <link rel="stylesheet" href="/css/control.css">
 <link rel="stylesheet" href="/css/update.css">
+<link rel="stylesheet" href="/css/setup.css">
 </head>
 <body>
   <div class="page">
@@ -41,39 +42,90 @@
     </div>
 
     <p class="hint">
-      Einmalig nötig: SYNSA braucht eine eigene Twitch-App, damit es
-      auf deinen Kanal zugreifen darf. Dauert zwei Minuten.
+      SYNSA arbeitet direkt mit deinem Twitch-Kanal. Dafür verbindest du einmalig
+      dein Twitch-Konto — die Bestätigung passiert bei Twitch selbst, in deinem
+      normalen Browser.
     </p>
 
+    <!-- Step 1: what SYNSA asks for, and why -->
     <div class="card setup-card">
-      <div class="card-title">Schritt 1 · Twitch-App anlegen</div>
-      <ol class="setup-steps">
-        <li>Öffne <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noreferrer">dev.twitch.tv/console/apps</a> und melde dich an.</li>
-        <li>Klick auf <strong>„Anwendung registrieren"</strong>.</li>
-        <li><strong>Name:</strong> frei wählbar, muss aber Twitch-weit eindeutig sein (z.&nbsp;B. „SYNSA DeinName").</li>
-        <li><strong>OAuth-Weiterleitungs-URL:</strong> exakt <code id="redirect-uri">http://localhost:4242/auth/twitch/callback</code></li>
-        <li><strong>Kategorie:</strong> beliebig · <strong>Clienttyp:</strong> <strong>Vertraulich</strong></li>
-        <li>Nach dem Anlegen: <strong>Client-ID</strong> kopieren, dann <strong>„Neues Geheimnis"</strong> klicken und das <strong>Client-Secret</strong> kopieren (wird nur einmal angezeigt).</li>
-      </ol>
+      <div class="card-title">Diese Rechte braucht SYNSA</div>
+      <p class="setup-lead">
+        Twitch fragt dich gleich nach diesen Berechtigungen. Hier steht, wofür
+        SYNSA jede einzelne tatsächlich benutzt.
+      </p>
+
+      <ul class="perm-list">
+        <li class="perm">
+          <span class="perm-icon" aria-hidden="true">◆</span>
+          <div class="perm-text">
+            <strong>Alerts auslösen</strong>
+            <span>Neue Follower, Abos, verschenkte Abos und Bits erkennen — das ist die Grundlage für jede Alert-Einblendung in OBS.</span>
+          </div>
+        </li>
+        <li class="perm">
+          <span class="perm-icon" aria-hidden="true">◆</span>
+          <div class="perm-text">
+            <strong>Chat lesen und schreiben</strong>
+            <span>Deinen Chat im Dashboard anzeigen, Nachrichten aus SYNSA senden und deine Emotes im Emote-Feld verfügbar machen.</span>
+          </div>
+        </li>
+        <li class="perm">
+          <span class="perm-icon" aria-hidden="true">◆</span>
+          <div class="perm-text">
+            <strong>Moderation</strong>
+            <span>Timeouts und Bans direkt aus dem Dashboard, sowie die Zuschauerliste mit Moderatoren und VIPs.</span>
+          </div>
+        </li>
+        <li class="perm">
+          <span class="perm-icon" aria-hidden="true">◆</span>
+          <div class="perm-text">
+            <strong>Titel und Kategorie</strong>
+            <span>Streamtitel und Kategorie ändern, ohne dafür Twitch im Browser öffnen zu müssen.</span>
+          </div>
+        </li>
+      </ul>
+
+      <p class="setup-note">
+        Alles bleibt auf diesem PC: SYNSA speichert die Zugangsdaten verschlüsselt
+        lokal und sendet sie an niemanden außer an Twitch selbst. Du kannst die
+        Verbindung jederzeit im Control-Panel wieder trennen.
+      </p>
     </div>
 
-    <form id="setup-form" class="card setup-card">
-      <div class="card-title">Schritt 2 · Zugangsdaten eintragen</div>
-      <label>
-        Client-ID
-        <input type="text" id="client-id" autocomplete="off" spellcheck="false" required>
-      </label>
-      <label>
-        Client-Secret
-        <input type="password" id="client-secret" autocomplete="off" spellcheck="false" required>
-      </label>
-      <button type="submit">Speichern und weiter</button>
-      <span id="setup-status" class="setup-status"></span>
-      <p class="setup-note">
-        Wird nur lokal auf diesem PC gespeichert und niemals irgendwohin gesendet
-        außer an Twitch selbst.
-      </p>
-    </form>
+    <!-- Step 2: the connection itself -->
+    <div class="card setup-card" id="connect-card">
+      <div class="card-title">Twitch-Konto verbinden</div>
+
+      <div class="connect-status" id="connect-status">
+        <span class="connect-dot" id="connect-dot" data-state="idle"></span>
+        <div class="connect-text">
+          <strong id="connect-title">Noch nicht verbunden</strong>
+          <span id="connect-subtitle">Ein Klick, dann bestätigst du bei Twitch.</span>
+        </div>
+      </div>
+
+      <!-- Shown while waiting for the user to approve in the browser -->
+      <div class="device-step" id="device-step" hidden>
+        <ol class="device-instructions">
+          <li>Twitch-Seite öffnen (geht in deinem normalen Browser auf).</li>
+          <li>Diesen Code dort eintragen und bestätigen.</li>
+        </ol>
+        <div class="device-code" id="device-code">––––––</div>
+        <div class="device-actions">
+          <a class="device-open" id="device-open" href="#" target="_blank" rel="noreferrer">Twitch-Seite öffnen</a>
+          <button type="button" class="device-cancel" id="device-cancel">Abbrechen</button>
+        </div>
+        <p class="device-hint" id="device-hint">SYNSA wartet auf deine Bestätigung …</p>
+      </div>
+
+      <div class="connect-actions">
+        <button type="button" id="connect-btn" class="connect-btn">Mit Twitch verbinden</button>
+        <a href="/dashboard.html" id="connect-continue" class="connect-continue" hidden>Weiter zum Dashboard</a>
+      </div>
+
+      <p class="setup-error" id="connect-error" hidden></p>
+    </div>
   </div>
 
   <script src="/shared/update-banner.js"></script>

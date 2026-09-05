@@ -54,8 +54,11 @@ autoUpdater.logger = {
 // automatically for app-update.yml when a `publish` block exists in
 // package.json — see the Phase 2B preflight audit) — set here too so the
 // running app's behavior never silently depends on what happened to be
-// baked into that file at build time.
-autoUpdater.setFeedURL({ provider: 'github', owner: 'SynAisa', repo: 'SYNSA' });
+// baked into that file at build time. The repository itself comes from
+// update/repository.js, shared with the changelog in server.js.
+const { owner, repo } = require('./repository');
+
+autoUpdater.setFeedURL({ provider: 'github', owner, repo });
 
 // The whole point of Phase 2A's UX (explicit user confirmation before any
 // download, stream-lock before any install) depends on electron-updater
