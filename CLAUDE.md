@@ -46,7 +46,7 @@ The project provides:
 
 
 
-Aktuelle Version: 0.2.1. Öffentlich installierbar, automatische Updates funktionieren gegen echte Releases.
+Aktuelle Version: 0.2.2. Öffentlich installierbar, automatische Updates funktionieren gegen echte Releases.
 
 
 
@@ -668,4 +668,3 @@ When reviewing code, distinguish between:
 
 
 Do not make unrelated changes while implementing a requested feature.
-

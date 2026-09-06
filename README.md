@@ -6,7 +6,7 @@ Ein lokales Windows-Programm zum Streamen auf Twitch: Alerts, ein Chat-Dashboard
 
 <!-- Dieser Abschnitt wird bei jedem Release aktualisiert. -->
 
-- **Aktuelle Version: 0.2.1** ([alle Releases](https://github.com/SynAisa/SYNSA/releases))
+- **Aktuelle Version: 0.2.2** ([alle Releases](https://github.com/SynAisa/SYNSA/releases))
 - Öffentlich installierbar: ja, der Installer liegt unter [Releases](https://github.com/SynAisa/SYNSA/releases/latest)
 - Automatische Updates funktionieren und sind gegen echte Releases getestet; geladen wird nur der geänderte Teil des Installers
 - SYNSA ist weiterhin in **aktiver Entwicklung** — zwischen Versionen kann sich Verhalten ändern, und es gibt noch raue Kanten
