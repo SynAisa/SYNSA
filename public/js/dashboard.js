@@ -358,8 +358,21 @@
     emotePickerSearch.focus();
   });
 
-  emotePickerSearch.addEventListener('input', (e) => {
-    renderEmotePicker(pickerData, e.target.value.trim().toLowerCase());
+  // Every keystroke used to rebuild the entire list: clearing it and creating
+  // a button, an image and a listener for every matching emote — of which a
+  // large 7TV set has thousands. Typing a three-letter name did that three
+  // times over, and the field visibly stalled while it happened. Waiting for
+  // a short pause renders once instead, with the same result: the filter is
+  // read from the field when the timer fires, so what gets rendered is always
+  // the current input.
+  const EMOTE_SEARCH_DEBOUNCE_MS = 120;
+  let emoteSearchTimer = null;
+
+  emotePickerSearch.addEventListener('input', () => {
+    clearTimeout(emoteSearchTimer);
+    emoteSearchTimer = setTimeout(() => {
+      renderEmotePicker(pickerData, emotePickerSearch.value.trim().toLowerCase());
+    }, EMOTE_SEARCH_DEBOUNCE_MS);
   });
 
   document.addEventListener('click', (e) => {
@@ -692,7 +705,11 @@
 
   function refreshRelativeTimes() {
     historyListEl.querySelectorAll('.history-time[data-timestamp]').forEach((el) => {
-      el.textContent = formatRelativeTime(Number(el.dataset.timestamp));
+      // Most rows read exactly the same as 15 seconds ago — "vor 3h" stays
+      // that for an hour — and assigning an identical string still dirties
+      // the node. Comparing first leaves those untouched.
+      const next = formatRelativeTime(Number(el.dataset.timestamp));
+      if (el.textContent !== next) el.textContent = next;
     });
   }
 
