@@ -279,42 +279,6 @@ h1 {
   border-color: var(--accent);
 }
 
-.countdown-preview-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 36px 16px;
-  border-radius: 8px;
-  background: #0b1112;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
-  text-align: center;
-}
-
-.countdown-preview-label {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-
-.countdown-preview-value {
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 20px var(--countdown-preview-glow, rgba(53, 201, 168, 0.65));
-}
-
-.countdown-preview-box.size-small .countdown-preview-value { font-size: 28px; }
-.countdown-preview-box.size-large .countdown-preview-value { font-size: 56px; }
-.countdown-preview-box.size-small .countdown-preview-label { font-size: 11px; }
-.countdown-preview-box.size-large .countdown-preview-label { font-size: 15px; }
-
 .countdown-row-fields {
   display: flex;
   gap: 24px;
@@ -608,13 +572,4 @@ button:hover {
 
 button:active {
   transform: scale(0.98);
-}
-
-
-/* Sits under the countdown "Entwurf" box, telling it apart from the embedded
-   overlay preview further down (shared/overlay-panel.js). */
-.countdown-draft-note {
-  margin: 0;
-  font-size: 11px;
-  color: var(--text-muted);
 }

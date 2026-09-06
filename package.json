@@ -11,6 +11,7 @@
   "scripts": {
     "start": "node server.js",
     "electron": "electron .",
+    "test": "node --test",
     "dist": "electron-builder --win nsis"
   },
   "dependencies": {

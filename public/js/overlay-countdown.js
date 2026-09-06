@@ -6,6 +6,10 @@
   let ws = null;
   let tickTimer = null;
 
+  // See applyStatus below: the settings page embeds this page with ?preview=1
+  // and needs to see something even while no countdown is running.
+  const IS_PREVIEW = new URLSearchParams(location.search).has('preview');
+
   function fmt(seconds) {
     const s = Math.max(0, Math.ceil(seconds));
     const h = Math.floor(s / 3600);
@@ -36,6 +40,20 @@
     stopTicking();
 
     if (!status || !status.running) {
+      // In the settings page's embedded preview a stopped countdown would
+      // leave an empty box, so it runs a sample instead — deliberately built
+      // from the settings currently being edited (label, colour, size), which
+      // makes the preview answer the question the page is actually about.
+      // Real state always wins: once the countdown is started, the broadcast
+      // arrives with running:true and takes this branch out of play.
+      if (IS_PREVIEW && status) {
+        applyStatus({
+          ...status,
+          running: true,
+          endsAt: Date.now() + (status.durationSeconds || 600) * 1000,
+        });
+        return;
+      }
       root.hidden = true;
       root.classList.remove('is-done');
       return;
@@ -72,6 +90,13 @@
     tickTimer = setInterval(render, 1000);
   }
 
+  if (IS_PREVIEW) {
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || !event.data || event.data.kind !== 'synsa-preview-status') return;
+      applyStatus(event.data.status);
+    });
+  }
+
   // Backs off instead of retrying twice a second forever while the app is
   // closed — this source lives in OBS for the whole stream.
   let retryDelay = 1500;
@@ -87,7 +112,7 @@
       // The embedded preview on the settings page loads this same URL with
       // ?preview=1. It must not count as a Browser Source in OBS, or the
       // connection status on that very page would always read "connected".
-      if (!new URLSearchParams(location.search).has('preview')) {
+      if (!IS_PREVIEW) {
         ws.send(JSON.stringify({ kind: 'register', role: 'overlay-countdown' }));
       }
     });

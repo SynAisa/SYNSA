@@ -14,12 +14,20 @@
 // German is the source language here as everywhere else — every string below
 // goes through t(), so the English table translates it.
 (function () {
-  // Versioned on purpose: if the dashboard changes enough that the tour is
-  // worth showing again, a new key (…v2) reintroduces it for everyone without
-  // touching anything else. Stored in localStorage, like the language — this
-  // is per-install interface state the page decides on its own, and it needs
-  // no server round trip to answer "has this been seen".
-  const STORAGE_KEY = 'synsa.dashboardTour.v1';
+  // Versioned on purpose: the number the server hands out (TOUR_VERSION) only
+  // goes up when the dashboard has changed enough to be worth explaining
+  // again. An ordinary release leaves it alone, so the tour stays gone.
+  //
+  // This used to live in localStorage, which turned out to be the wrong place:
+  // it did not survive updates, so the tour came back after every single one.
+  // The server keeps it in data/ui-state.json now, next to everything else
+  // that outlives an update. The old key is still read once, so anyone who
+  // already dismissed the tour is not greeted again.
+  const LEGACY_STORAGE_KEY = 'synsa.dashboardTour.v1';
+
+  // Overwritten by the first /api/ui-state answer. The fallback only matters
+  // if the tour is finished before that answer arrives.
+  let tourVersion = 1;
 
   const STEPS = [
     // Opens the tour without highlighting anything: right after the setup this
@@ -80,22 +88,25 @@
   let currentIndex = -1;
   let highlighted = null;
 
-  function hasSeen() {
+  // Only consulted once, to carry an earlier dismissal over into the new
+  // storage. Never written to again.
+  function dismissedBeforeMove() {
     try {
-      return localStorage.getItem(STORAGE_KEY) === 'done';
+      return localStorage.getItem(LEGACY_STORAGE_KEY) === 'done';
     } catch {
-      // Storage blocked — treat it as seen rather than reopening the tour on
-      // every single visit.
-      return true;
+      // Storage blocked — nothing to carry over.
+      return false;
     }
   }
 
   function markSeen() {
-    try {
-      localStorage.setItem(STORAGE_KEY, 'done');
-    } catch {
-      // Not being able to remember it only means it may appear again.
-    }
+    fetch('/api/ui-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tourSeenVersion: tourVersion }),
+    }).catch(() => {
+      // Not being able to record it only means the tour may appear once more.
+    });
   }
 
   function build() {
@@ -291,12 +302,39 @@
     history.replaceState(null, '', location.pathname);
   }
 
-  if (requested || !hasSeen()) {
-    // After the page's own scripts have set the panels up. The readyState
-    // check covers the case where load has already fired by the time this
-    // runs, which would otherwise mean the listener never gets called.
+  // After the page's own scripts have set the panels up. The readyState check
+  // covers the case where load has already fired by the time this runs, which
+  // would otherwise mean the listener never gets called.
+  function startWhenReady() {
     if (document.readyState === 'complete') start();
     else window.addEventListener('load', start, { once: true });
+  }
+
+  if (requested) {
+    startWhenReady();
+  } else {
+    fetch('/api/ui-state')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        // No answer means no decision: showing the tour on a failed request
+        // would reopen it every time the server hiccups.
+        if (!data) return;
+        tourVersion = data.tourVersion;
+        if (data.tourSeenVersion >= tourVersion) return;
+
+        // One-time move of the old localStorage flag. Bound to version 1
+        // deliberately: a future version 2 is a new tour, and having seen the
+        // first one says nothing about it.
+        if (tourVersion === 1 && dismissedBeforeMove()) {
+          markSeen();
+          return;
+        }
+
+        startWhenReady();
+      })
+      .catch(() => {
+        // Same reasoning as above — stay quiet.
+      });
   }
 
   window.DashboardTour = { start };

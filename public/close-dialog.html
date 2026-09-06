@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>SYNSA schließen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/close-dialog.css">
+</head>
+<body>
+  <main class="close-dialog">
+    <h1 class="close-dialog-title">Soll SYNSA im Hintergrund weiterlaufen?</h1>
+    <p class="close-dialog-text">
+      Im Tray läuft SYNSA weiter: Alerts, Chat und die Overlays in OBS bleiben aktiv.
+      Beim Beenden hören sie auf zu funktionieren, bis du SYNSA wieder startest.
+    </p>
+
+    <label class="close-dialog-remember">
+      <input type="checkbox" id="close-remember">
+      Diese Wahl merken
+    </label>
+
+    <div class="close-dialog-actions">
+      <button type="button" class="close-dialog-btn" id="close-cancel">Abbrechen</button>
+      <button type="button" class="close-dialog-btn" id="close-quit">SYNSA beenden</button>
+      <button type="button" class="close-dialog-btn is-primary" id="close-tray">Im Tray weiterlaufen</button>
+    </div>
+  </main>
+
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/js/close-dialog.js"></script>
+</body>
+</html>

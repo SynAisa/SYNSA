@@ -89,6 +89,12 @@
         </form>
       </section>
 
+      <!-- Drag handle between the two columns. Sits between them in the DOM
+           as well as visually (see the order values in dashboard.css), so
+           keyboard focus reaches it in the place it appears. -->
+      <div class="columns-splitter" id="columns-splitter" role="separator" aria-orientation="vertical"
+           tabindex="0" title="Breite anpassen — Doppelklick setzt zurück"></div>
+
       <section class="panel history-panel">
         <div class="panel-title">Alert Box</div>
         <div class="history-filters">
@@ -114,6 +120,7 @@
   <script src="/js/dashboard/chatters.js"></script>
   <script src="/js/dashboard/stream.js"></script>
   <script src="/js/dashboard.js"></script>
+  <script src="/js/dashboard/layout.js"></script>
   <script src="/js/dashboard/tour.js"></script>
 </body>
 </html>

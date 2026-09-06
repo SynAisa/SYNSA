@@ -285,11 +285,17 @@ h1 {
   object-fit: cover;
 }
 
+/* Three tracks, not two: the middle one is the drag handle between Alert Box
+   and Chat. The two outer widths are variables so the handle can change them
+   at runtime (see dashboard/layout.js) without this file knowing anything
+   about dragging — the defaults here stay the layout everyone starts with. */
 .columns {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 16px;
+  /* The middle track is exactly the gap the two panels had before, so the
+     handle costs no space: it lives in the space that was already there. */
+  grid-template-columns: var(--col-left, 1fr) 16px var(--col-right, 1.4fr);
+  gap: 0;
   min-height: 0;
 }
 
@@ -297,13 +303,65 @@ h1 {
   order: 1;
 }
 
-.chat-panel {
+.columns-splitter {
   order: 2;
+}
+
+.chat-panel {
+  order: 3;
+}
+
+/* Deliberately narrow to look at and wide to hit: the visible line is the
+   1px rule in ::before, the element around it is the grab area. */
+.columns-splitter {
+  align-self: stretch;
+  position: relative;
+  cursor: col-resize;
+  border-radius: 4px;
+  touch-action: none;
+}
+
+.columns-splitter::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.columns-splitter:hover::before,
+.columns-splitter.is-dragging::before,
+.columns-splitter:focus-visible::before {
+  background: var(--accent);
+  width: 2px;
+}
+
+.columns-splitter:focus-visible {
+  outline: none;
+}
+
+/* While dragging, the pointer leaves the handle constantly — without this the
+   cursor flickers back to a text caret over the panels it passes. */
+body.is-resizing-columns,
+body.is-resizing-columns * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 @media (max-width: 800px) {
   .columns {
+    /* One column below this width, so there is nothing left to split — the
+       gap has to come back as a real gap here. */
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .columns-splitter {
+    display: none;
   }
 }
 

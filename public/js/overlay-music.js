@@ -9,6 +9,41 @@
 
   let ws = null;
 
+  // The settings page embeds this same page with ?preview=1. Without a paired
+  // source — or with one that simply is not playing anything — the overlay
+  // correctly shows nothing at all, which is right in OBS and useless in a
+  // preview box. Only in preview mode that empty state is filled with an
+  // obvious sample instead. Real data always wins: the moment a genuine song
+  // arrives it replaces this like any other track change.
+  const IS_PREVIEW = new URLSearchParams(location.search).has('preview');
+
+  // Drawn inline rather than fetched: an overlay must not depend on a network
+  // request to render, least of all for a placeholder.
+  const DEMO_COVER =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+      "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'>" +
+        "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>" +
+        "<stop offset='0' stop-color='#17665B'/><stop offset='1' stop-color='#0B1112'/>" +
+        '</linearGradient></defs>' +
+        "<rect width='300' height='300' fill='url(#g)'/>" +
+        "<circle cx='150' cy='150' r='58' fill='none' stroke='#35C9A8' stroke-width='6'/>" +
+        "<circle cx='150' cy='150' r='12' fill='#35C9A8'/>" +
+        '</svg>'
+    );
+
+  // Paused on purpose: a preview that animates for three and a half minutes
+  // and then fades itself out would only be confusing.
+  const DEMO_STATUS = {
+    connected: true,
+    title: 'Beispielsong',
+    artist: 'SYNSA-Vorschau',
+    thumbnail: DEMO_COVER,
+    durationSeconds: 214,
+    progressSeconds: 76,
+    isPlaying: false,
+  };
+
   // local progress interpolation state
   let lastKnownProgress = 0; // seconds
   let lastKnownAt = 0; // performance.now() timestamp
@@ -122,6 +157,12 @@
 
   function onStatus(status) {
     if (!status || !status.connected || !status.title) {
+      // DEMO_STATUS passes the check above, so this hands over exactly once
+      // and cannot loop.
+      if (IS_PREVIEW) {
+        onStatus(DEMO_STATUS);
+        return;
+      }
       card.classList.remove('visible');
       currentTrackKey = null;
       durationSeconds = 0;
@@ -236,7 +277,7 @@
       // The embedded preview on the settings page loads this same URL with
       // ?preview=1. It must not count as a Browser Source in OBS, or the
       // connection status on that very page would always read "connected".
-      if (!new URLSearchParams(location.search).has('preview')) {
+      if (!IS_PREVIEW) {
         ws.send(JSON.stringify({ kind: 'register', role: 'overlay-music' }));
       }
     });
@@ -260,6 +301,11 @@
     });
     ws.addEventListener('error', () => ws.close());
   }
+
+  // Without a music source there is no state.music in the snapshot at all, so
+  // onStatus would never run and the preview would stay blank. Seeding it here
+  // paints the sample right away; the first real broadcast overwrites it.
+  if (IS_PREVIEW) onStatus(null);
 
   connect();
 })();

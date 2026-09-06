@@ -69,6 +69,18 @@
     previewValue.textContent = `${current} / ${target || '—'}`;
     previewFill.style.width = `${percent}%`;
     previewEl.style.setProperty('--goal-accent', colorInput.value);
+
+    // While no goal exists yet, give the embedded overlay the same unsaved
+    // form values as this local preview. An active goal continues to show
+    // its genuine live state, matching OBS.
+    if (!status || !(status.target > 0)) {
+      window.SynsaOverlayPreview?.setStatus({
+        target,
+        current,
+        label: labelInput.value || METRIC_LABELS[metricSelect.value] || '',
+        accentColor: colorInput.value,
+      });
+    }
   }
 
   function renderSince() {

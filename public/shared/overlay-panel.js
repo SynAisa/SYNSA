@@ -45,6 +45,20 @@
   urlInput.value = url;
 
   const preview = document.getElementById('overlay-preview');
+  let previewFrame = null;
+  let previewStatus = null;
+
+  // Settings pages can pass their unsaved form state to their own embedded
+  // overlay. The child accepts it only from this exact origin (see the
+  // overlay scripts), and the last state is replayed after iframe loading so
+  // an early form update cannot get lost.
+  function setPreviewStatus(status) {
+    previewStatus = status;
+    if (previewFrame && previewFrame.contentWindow) {
+      previewFrame.contentWindow.postMessage({ kind: 'synsa-preview-status', status }, location.origin);
+    }
+  }
+
   if (preview) {
     preview.className = 'overlay-preview';
     preview.innerHTML = `
@@ -52,9 +66,15 @@
       <div class="overlay-preview-frame">
         <iframe src="${url}?preview=1" title="Overlay-Vorschau" loading="lazy"></iframe>
       </div>
-      <p class="overlay-preview-note">Das ist die echte Overlay-Seite, eingebettet — sie zeigt live denselben Stand wie in OBS.</p>
+      <p class="overlay-preview-note">Das ist die echte Overlay-Seite, eingebettet — sie zeigt live denselben Stand wie in OBS. Solange nichts läuft, steht hier ein Beispiel.</p>
     `;
+    previewFrame = preview.querySelector('iframe');
+    previewFrame.addEventListener('load', () => {
+      if (previewStatus) setPreviewStatus(previewStatus);
+    });
   }
+
+  window.SynsaOverlayPreview = { setStatus: setPreviewStatus };
 
   // Injected after shared/i18n.js walked the page, so these subtrees get
   // their own pass.

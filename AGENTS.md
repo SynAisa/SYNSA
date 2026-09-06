@@ -98,7 +98,7 @@ Differential-Downloads funktionieren nur, weil `update/productionProvider.js` di
 
 
 
-`data/` bleibt lokal: `goal.json`, `window-settings.json`, `music-source.json`, `ui-state.json`, verschlüsselte Tokens. `window-settings.json` wird von `electron/main.js` \*und\* `server.js` geschrieben — deshalb bei jedem Request frisch von Platte lesen, nicht cachen.
+`data/` bleibt lokal: `goal.json`, `window-settings.json`, `music-source.json`, verschlüsselte Tokens. `window-settings.json` wird von `electron/main.js` \*und\* `server.js` geschrieben — deshalb bei jedem Request frisch von Platte lesen, nicht cachen.
 
 
 
@@ -120,12 +120,6 @@ Deutsch ist die Originalsprache und steht im Code; `public/i18n/en.js` bildet De
 
 Die README ist auf Deutsch. Der Abschnitt „Aktueller Stand" muss bei jedem Release aktualisiert werden.
 
-
-
-\### Der Rundgang
-
-
-Der Dashboard-Rundgang hängt an `TOUR_VERSION` in `server.js`. Diese Zahl nur erhöhen, wenn sich das Dashboard so stark geändert hat, dass der Rundgang neu gezeigt werden soll — ein normales Release fasst sie nicht an.
 
 
 \### Bekannte Falle
@@ -668,4 +662,3 @@ When reviewing code, distinguish between:
 
 
 Do not make unrelated changes while implementing a requested feature.
-

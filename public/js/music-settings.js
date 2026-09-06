@@ -36,14 +36,19 @@
     spotifyCard.hidden = status.source !== 'spotify';
 
     // No client ID configured means the Spotify flow cannot even start, so
-    // say that rather than offering a button that only produces an error.
+    // the entry is disabled rather than offering a button that can only
+    // produce an error. The reason has to be readable *at* the entry, not
+    // only in the footnote below the field: a greyed-out option with no
+    // explanation next to it reads as a bug, which is exactly how it was
+    // reported.
     const spotifyOption = [...sourceSelect.options].find((o) => o.value === 'spotify');
     spotifyOption.disabled = !status.spotifyAvailable;
-    if (!status.spotifyAvailable) {
-      sourceNote.textContent = t(
-        'Für Spotify ist in dieser SYNSA-Installation keine Client-ID hinterlegt — bis dahin steht nur YTMDesktop zur Verfügung.'
-      );
-    }
+    spotifyOption.textContent = status.spotifyAvailable ? t('Spotify') : t('Spotify (noch nicht verfügbar)');
+    sourceNote.textContent = status.spotifyAvailable
+      ? t('Es ist immer nur eine Quelle aktiv. Das Overlay bleibt dasselbe.')
+      : t(
+          'Spotify ist vorbereitet, aber noch nicht freigeschaltet: dafür muss eine Spotify-Anwendung für SYNSA registriert sein. Bis dahin läuft das Overlay über YTMDesktop.'
+        );
 
     const spotify = status.spotify || {};
     spotifyConnectBtn.hidden = spotify.paired;

@@ -11,15 +11,26 @@
   const liveEl = document.getElementById('countdown-live');
   const presetBtns = document.querySelectorAll('.countdown-preset-btn');
 
-  const previewBox = document.getElementById('countdown-preview-box');
-  const previewLabel = document.getElementById('countdown-preview-label');
-  const previewValue = document.getElementById('countdown-preview-value');
-
+  // The page used to carry a second, locally drawn "Entwurf" box next to the
+  // embedded overlay preview. Both showed the same thing whenever nothing was
+  // running, so the drawn copy — and the glow/size maths it needed to stay in
+  // step with the real overlay — is gone. What is left here drives the
+  // "Läuft noch: …" line only.
   let tickTimer = null;
-  // While a countdown is actually running, the preview mirrors the real
-  // server-driven value (what's genuinely on screen right now) instead of
-  // the form fields, which applyCountdown() overwrites anyway once running.
-  let runningStatus = null;
+  let currentStatus = null;
+
+  function updateOverlayPreview() {
+    // A running countdown is intentionally left as the real live state. The
+    // sample is only for the stopped, editable setup state.
+    if (currentStatus && currentStatus.running) return;
+    window.SynsaOverlayPreview?.setStatus({
+      running: false,
+      durationSeconds: (parseInt(minutesInput.value, 10) || 0) * 60 + (parseInt(secondsInput.value, 10) || 0),
+      label: labelInput.value,
+      accentColor: colorInput.value,
+      fontSize: fontSizeSelect.value,
+    });
+  }
 
   function handleMessage(msg) {
     if (msg.kind === 'state' && msg.state && msg.state.countdown) applyCountdown(msg.state.countdown);
@@ -33,33 +44,6 @@
     return `${m}:${String(r).padStart(2, '0')}`;
   }
 
-  // Same 65%-alpha glow math as the real overlay (public/js/overlay-countdown.js)
-  // so the preview matches what OBS will actually show, not an approximation.
-  function glowFrom(hex) {
-    const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-    if (!match) return 'rgba(53, 201, 168, 0.65)';
-    const [r, g, b] = match.slice(1).map((part) => parseInt(part, 16));
-    return `rgba(${r}, ${g}, ${b}, 0.65)`;
-  }
-
-  function renderPreviewChrome() {
-    // No fallback caption here either: the preview has to show what the
-    // overlay will show, and an empty label now really means no caption.
-    previewLabel.textContent = labelInput.value;
-    previewBox.className = `countdown-preview-box size-${fontSizeSelect.value}`;
-    previewBox.style.setProperty('--countdown-preview-glow', glowFrom(colorInput.value));
-  }
-
-  // Called on every keystroke/change while stopped, so adjusting the form
-  // shows its effect immediately instead of only after pressing Start.
-  function updatePreviewFromForm() {
-    if (runningStatus) return;
-    renderPreviewChrome();
-    const minutes = parseInt(minutesInput.value, 10) || 0;
-    const seconds = parseInt(secondsInput.value, 10) || 0;
-    previewValue.textContent = formatDuration(minutes * 60 + seconds);
-  }
-
   const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
 
   // <input type="color"> has no visible code, just a swatch — this keeps a
@@ -70,7 +54,10 @@
     colorHexInput.classList.remove('is-invalid');
   }
 
-  colorInput.addEventListener('input', syncHexFromPicker);
+  colorInput.addEventListener('input', () => {
+    syncHexFromPicker();
+    updateOverlayPreview();
+  });
 
   colorHexInput.addEventListener('input', () => {
     const value = colorHexInput.value.trim();
@@ -81,23 +68,24 @@
     }
     colorHexInput.classList.remove('is-invalid');
     colorInput.value = normalized;
-    updatePreviewFromForm();
+    updateOverlayPreview();
   });
 
-  [minutesInput, secondsInput, labelInput, colorInput, fontSizeSelect].forEach((el) => {
-    el.addEventListener('input', updatePreviewFromForm);
+  [minutesInput, secondsInput, labelInput, fontSizeSelect].forEach((el) => {
+    el.addEventListener('input', updateOverlayPreview);
   });
 
   presetBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       minutesInput.value = btn.dataset.minutes;
       secondsInput.value = 0;
-      updatePreviewFromForm();
+      updateOverlayPreview();
     });
   });
 
   function applyCountdown(status) {
     if (!status) return;
+    currentStatus = status;
 
     clearInterval(tickTimer);
     tickTimer = null;
@@ -113,24 +101,20 @@
     fontSizeSelect.value = status.fontSize;
 
     if (!status.running) {
-      runningStatus = null;
       startBtn.hidden = false;
       stopBtn.hidden = true;
       liveEl.textContent = '';
-      updatePreviewFromForm();
+      updateOverlayPreview();
       return;
     }
 
-    runningStatus = status;
     startBtn.hidden = true;
     stopBtn.hidden = false;
-    renderPreviewChrome();
 
     const tick = () => {
       const remaining = (status.endsAt - Date.now()) / 1000;
       liveEl.textContent =
         remaining > 0 ? t('Läuft noch: {t}').replace('{t}', formatDuration(remaining)) : t('Bei 0:00 angekommen');
-      previewValue.textContent = formatDuration(Math.max(0, remaining));
     };
     tick();
     tickTimer = setInterval(tick, 1000);
@@ -191,7 +175,6 @@
     }
   }
 
-  updatePreviewFromForm();
   loadInitial();
   connectPageSocket(handleMessage);
 })();

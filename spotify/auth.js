@@ -45,16 +45,24 @@ function cancel() {
   pendingState = null;
 }
 
+// A callback is only allowed to end the flow it belongs to. This prevents a
+// random navigation to the loopback callback endpoint from cancelling a
+// login that the user is currently completing in their browser.
+function hasPendingState(state) {
+  return Boolean(pendingVerifier && state && state === pendingState);
+}
+
 // Called by the loopback callback route. Throws with a readable message
 // rather than letting a Spotify error body reach the browser as-is.
 async function exchangeCode(code, state) {
   if (!pendingVerifier) throw new Error('Es läuft gerade keine Spotify-Anmeldung');
   if (!state || state !== pendingState) {
-    // A mismatch is never a retryable accident — drop the pending flow
-    // rather than leaving a verifier lying around for a second attempt.
-    cancel();
+    // Do not cancel here: this endpoint is on loopback and can be navigated
+    // to by another page. Only the callback carrying the unguessable state
+    // may consume the pending verifier.
     throw new Error('Ungültiger state-Parameter');
   }
+  if (!code) throw new Error('Spotify hat keinen Autorisierungscode geliefert');
 
   const verifier = pendingVerifier;
   cancel();
@@ -158,4 +166,4 @@ async function spotifyFetch(pathAndQuery) {
   return res;
 }
 
-module.exports = { buildAuthorizeUrl, cancel, exchangeCode, refreshTokens, spotifyFetch };
+module.exports = { buildAuthorizeUrl, cancel, hasPendingState, exchangeCode, refreshTokens, spotifyFetch };

@@ -14,8 +14,23 @@
     return isNaN(date) ? '' : date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  function renderEntries(container, data) {
+  // The welcome screen appears right after an update and answers exactly one
+  // question: what changed in the version that was just installed. The full
+  // history there pushed that answer off the top of a small window and made
+  // every release look alike. "Über SYNSA" keeps the complete list.
+  //
+  // Falls back to the newest entry when the installed version has no release
+  // of its own (a local build, or GitHub not reachable yet) — an empty box
+  // would be worse than the closest thing available.
+  function selectEntries(data, onlyCurrent) {
     const entries = (data && data.entries) || [];
+    if (!onlyCurrent || entries.length === 0) return entries;
+    const current = entries.find((entry) => entry.version === data.currentVersion);
+    return [current || entries[0]];
+  }
+
+  function renderEntries(container, data, onlyCurrent) {
+    const entries = selectEntries(data, onlyCurrent);
 
     if (entries.length === 0) {
       const empty = document.createElement('p');
@@ -77,12 +92,12 @@
   // Fetches and renders. A failed request renders the same quiet "not
   // available" line as an empty list — no changelog is never worth an error
   // dialog on a page the user came to for something else.
-  window.loadChangelog = function loadChangelog(container) {
+  window.loadChangelog = function loadChangelog(container, { onlyCurrent = false } = {}) {
     if (!container) return Promise.resolve();
 
     return fetch('/api/changelog')
       .then((res) => (res.ok ? res.json() : null))
       .catch(() => null)
-      .then((data) => renderEntries(container, data));
+      .then((data) => renderEntries(container, data, onlyCurrent));
   };
 })();

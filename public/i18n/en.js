@@ -83,11 +83,19 @@ window.SynsaTranslationsEn = {
   'In OBS verbunden': 'Connected in OBS',
   'In OBS verbunden ({n})': 'Connected in OBS ({n})',
   'Overlay-Vorschau': 'Overlay preview',
-  'Das ist die echte Overlay-Seite, eingebettet — sie zeigt live denselben Stand wie in OBS.':
-    'This is the real overlay page, embedded — it shows the same live state as OBS does.',
-  Entwurf: 'Draft',
-  'So sieht der Countdown mit den aktuellen Eingaben aus — gestartet wird er erst mit "Starten".':
-    'This is how the countdown looks with the current input — it only starts when you press "Start".',
+  'Breite anpassen — Doppelklick setzt zurück': 'Adjust width — double-click resets',
+  'Soll SYNSA im Hintergrund weiterlaufen?': 'Should SYNSA keep running in the background?',
+  'Im Tray läuft SYNSA weiter: Alerts, Chat und die Overlays in OBS bleiben aktiv. Beim Beenden hören sie auf zu funktionieren, bis du SYNSA wieder startest.':
+    'In the tray SYNSA keeps running: alerts, chat and the overlays in OBS stay active. Quitting stops them until you start SYNSA again.',
+  'Diese Wahl merken': 'Remember this choice',
+  'Im Tray weiterlaufen': 'Keep running in the tray',
+  'Neu in dieser Version': 'New in this version',
+  'Spotify (noch nicht verfügbar)': 'Spotify (not available yet)',
+  '(in Vorbereitung).': '(in preparation).',
+  'Spotify ist vorbereitet, aber noch nicht freigeschaltet: dafür muss eine Spotify-Anwendung für SYNSA registriert sein. Bis dahin läuft das Overlay über YTMDesktop.':
+    'Spotify is prepared but not enabled yet: it needs a Spotify application registered for SYNSA. Until then the overlay runs on YTMDesktop.',
+  'Das ist die echte Overlay-Seite, eingebettet — sie zeigt live denselben Stand wie in OBS. Solange nichts läuft, steht hier ein Beispiel.':
+    'This is the real overlay page, embedded — it shows the same live state as OBS does. While nothing is running, a sample is shown here.',
 
   // Moderationszeilen im Chat
   '{name} wurde gebannt.': '{name} was banned.',

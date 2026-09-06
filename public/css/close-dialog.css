@@ -1,0 +1,115 @@
+/* The window that opens when the main window is closed.
+
+   Replaces Windows' own message box, which could not be styled at all: only
+   its texts and button labels were ours, everything around them was grey
+   system chrome in a program that is otherwise charcoal and mint.
+
+   The window is frameless and fixed-size (see openCloseDialog in
+   electron/main.js), so this file owns the whole surface including the border
+   — there is no OS frame around it to draw one. */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text);
+  /* Opaque, not the semi-transparent --bg-card: nothing sits behind this
+     window to show through, and a transparent frameless window renders as a
+     black rectangle on some Windows GPU configurations. */
+  background: #0f1414;
+  /* The frame the OS no longer draws. */
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  user-select: none;
+  overflow: hidden;
+}
+
+.close-dialog {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 22px 24px 18px;
+  display: flex;
+  flex-direction: column;
+  /* The whole surface is a drag handle, so the window can still be moved
+     without a title bar. The controls opt out again below. */
+  -webkit-app-region: drag;
+}
+
+.close-dialog-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.close-dialog-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.close-dialog-remember {
+  margin-top: auto;
+  padding-top: 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.close-dialog-remember input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.close-dialog-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.close-dialog-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.close-dialog-btn:hover {
+  background: rgba(53, 201, 168, 0.1);
+  border-color: rgba(53, 201, 168, 0.45);
+}
+
+.close-dialog-btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1112;
+}
+
+.close-dialog-btn.is-primary:hover {
+  background: var(--highlight);
+  border-color: var(--highlight);
+}
+
+.close-dialog-btn:focus-visible {
+  outline: 2px solid var(--highlight);
+  outline-offset: 2px;
+}

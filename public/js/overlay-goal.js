@@ -9,6 +9,10 @@
 
   let ws = null;
 
+  // See applyStatus below: the settings page embeds this page with ?preview=1
+  // and needs to show something before a target has been set.
+  const IS_PREVIEW = new URLSearchParams(location.search).has('preview');
+
   // The glow is the accent at 65% alpha, mixed here rather than with CSS
   // color-mix() so it also works on the older Chromium builds some OBS
   // versions still ship. Same math as overlay-countdown.js.
@@ -23,6 +27,14 @@
     // No target means nothing has been set up yet — an empty source beats a
     // "0 / 0" bar sitting on the stream.
     if (!status || !(status.target > 0)) {
+      // Same reasoning as overlay-countdown.js: in the settings page's
+      // embedded preview an unset goal would leave an empty box, so a sample
+      // target is shown, built from the label and colour being edited. A real
+      // target takes this branch out of play immediately.
+      if (IS_PREVIEW && status) {
+        applyStatus({ ...status, target: 100, current: 40 });
+        return;
+      }
       root.hidden = true;
       return;
     }
@@ -43,6 +55,13 @@
     root.classList.toggle('is-reached', current >= target);
   }
 
+  if (IS_PREVIEW) {
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || !event.data || event.data.kind !== 'synsa-preview-status') return;
+      applyStatus(event.data.status);
+    });
+  }
+
   // Backs off instead of retrying twice a second forever while the app is
   // closed — this source lives in OBS for the whole stream.
   let retryDelay = 1500;
@@ -58,7 +77,7 @@
       // The embedded preview on the settings page loads this same URL with
       // ?preview=1. It must not count as a Browser Source in OBS, or the
       // connection status on that very page would always read "connected".
-      if (!new URLSearchParams(location.search).has('preview')) {
+      if (!IS_PREVIEW) {
         ws.send(JSON.stringify({ kind: 'register', role: 'overlay-goal' }));
       }
     });

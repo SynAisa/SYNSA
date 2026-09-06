@@ -13,10 +13,11 @@
 // the release notes — lives in the containers listed in SKIP_CONTAINERS and
 // is never touched, so a viewer called "Trennen" cannot be renamed.
 //
-// The choice is stored per install in localStorage rather than on the server:
-// every page runs in the same window and shares it, it is readable
-// synchronously (so the page never flashes German before switching), and it
-// survives updates along with the rest of the app data.
+// The choice is read from localStorage because that read has to be
+// synchronous — every page shares the same window, and a round trip here
+// would flash German before switching. It is mirrored to the server as well:
+// localStorage turned out not to survive an update, so data/ui-state.json is
+// what actually carries the choice across one. See syncWithServer below.
 (function () {
   const STORAGE_KEY = 'synsa.language';
   const DEFAULT_LANGUAGE = 'de';
@@ -45,13 +46,80 @@
     }
   }
 
+  // localStorage stays the one the page reads, because that read has to be
+  // synchronous — a fetch here would show German for a moment on every single
+  // page load. But it does not survive an update (the same defect that kept
+  // restarting the guided tour), so the choice is mirrored into data/ on the
+  // server and restored from there when the local copy is gone.
+  function rememberOnServer(language) {
+    return fetch('/api/ui-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language }),
+    }).catch(() => {
+      // Losing the mirror only costs the language after the next update.
+    });
+  }
+
   function setLanguage(language) {
     if (!SUPPORTED.includes(language)) return Promise.reject(new Error(`Unbekannte Sprache: ${language}`));
     try {
       localStorage.setItem(STORAGE_KEY, language);
-      return Promise.resolve(language);
     } catch (err) {
       return Promise.reject(err);
+    }
+    rememberOnServer(language);
+    return Promise.resolve(language);
+  }
+
+  // Runs once per page load, after the page has already been translated with
+  // whatever the local copy said.
+  //
+  // The restore reloads, because the table is chosen at load time and half a
+  // page cannot be re-translated into a language it never had. That reload
+  // can happen at most once per install — right after an update — and only
+  // for someone who actually chose English, so it is not a cost anyone pays
+  // twice. RELOAD_GUARD makes sure of that even if the write fails.
+  const RELOAD_GUARD = 'synsa.language.restored';
+
+  function syncWithServer(localValue) {
+    fetch('/api/ui-state')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+
+        if (localValue) {
+          // Local wins: it is what the user is looking at right now.
+          if (data.language !== localValue) rememberOnServer(localValue);
+          return;
+        }
+
+        if (!SUPPORTED.includes(data.language) || data.language === DEFAULT_LANGUAGE) return;
+
+        try {
+          if (sessionStorage.getItem(RELOAD_GUARD)) return;
+          sessionStorage.setItem(RELOAD_GUARD, '1');
+          localStorage.setItem(STORAGE_KEY, data.language);
+        } catch {
+          // Without storage there is nothing to restore into, and reloading
+          // would loop.
+          return;
+        }
+        location.reload();
+      })
+      .catch(() => {
+        // Nothing to sync against; the local copy keeps working.
+      });
+  }
+
+  // The raw stored value, or null when nothing is stored — which is what
+  // syncWithServer needs to tell "chose German" from "chose nothing".
+  function storedLanguage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return SUPPORTED.includes(stored) ? stored : null;
+    } catch {
+      return null;
     }
   }
 
@@ -128,4 +196,6 @@
   // The scripts sit at the end of <body>, so the DOM is already parsed here
   // and this runs before the page has had a chance to be interacted with.
   apply();
+
+  syncWithServer(storedLanguage());
 })();

@@ -787,6 +787,78 @@ app.post('/api/welcome/seen', (req, res) => {
   res.json({ ok: welcomeState.setWelcomedVersion(version), version });
 });
 
+// --- Interface state that has to outlive an update -------------------------
+
+// Two things the pages used to remember in localStorage: whether the guided
+// tour has been dealt with, and which interface language was chosen. Both
+// were reported as resetting after every update, and both were verifiably
+// gone from Chromium's storage while the rest of data/ was untouched — so
+// they move here, next to every other setting that survives an update by
+// construction.
+//
+// The tour is versioned rather than stored as a plain "seen" flag: bumping
+// TOUR_VERSION is the deliberate act of saying "the dashboard changed enough
+// to be worth showing again". An ordinary release does not touch it, which is
+// exactly the difference the tour was missing.
+const TOUR_VERSION = 1;
+const UI_STATE_FILE = path.join(DATA_DIR, 'ui-state.json');
+
+// How much of the dashboard row the left column takes, as a fraction. Bounded
+// here as well as in the page: a value out of range (an edited file, an older
+// build) would otherwise collapse one of the two panels to nothing with no way
+// left to drag it back.
+function clampLayoutColumns(value) {
+  // Number(null) is 0, which would clamp a "nothing stored yet" into a real
+  // width and quietly reshape the dashboard the first time anything else is
+  // saved. Only an actual number counts.
+  if (typeof value !== 'number') return null;
+  const number = Number(value);
+  if (!Number.isFinite(number)) return null;
+  return Math.min(0.8, Math.max(0.2, number));
+}
+
+function loadUiState() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(UI_STATE_FILE, 'utf8'));
+    return {
+      tourSeenVersion: Number(saved.tourSeenVersion) || 0,
+      language: saved.language === 'en' || saved.language === 'de' ? saved.language : null,
+      layoutColumns: clampLayoutColumns(saved.layoutColumns),
+    };
+  } catch {
+    return { tourSeenVersion: 0, language: null, layoutColumns: null };
+  }
+}
+
+function saveUiState(patch) {
+  const next = { ...loadUiState(), ...patch };
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(UI_STATE_FILE, JSON.stringify(next, null, 2));
+  } catch (err) {
+    console.error('Could not save interface state:', err.message);
+  }
+  return next;
+}
+
+app.get('/api/ui-state', (req, res) => {
+  const saved = loadUiState();
+  res.json({ ...saved, tourVersion: TOUR_VERSION });
+});
+
+// Deliberately a merge, not a replace: the tour and the language switch write
+// their own field and must not clear the other one.
+app.post('/api/ui-state', (req, res) => {
+  const patch = {};
+  if (req.body.tourSeenVersion !== undefined) patch.tourSeenVersion = Number(req.body.tourSeenVersion) || 0;
+  if (req.body.language === 'de' || req.body.language === 'en') patch.language = req.body.language;
+  // Only a usable number is taken: a malformed value should leave the width
+  // that is stored alone rather than silently resetting the dashboard.
+  const layoutColumns = clampLayoutColumns(req.body.layoutColumns);
+  if (layoutColumns !== null) patch.layoutColumns = layoutColumns;
+  res.json({ ...saveUiState(patch), tourVersion: TOUR_VERSION });
+});
+
 // The changelog box on the welcome screen. GitHub's release list is the
 // single source of truth — the same release bodies the update banner already
 // shows — so there is no second changelog file to keep in sync. Which
@@ -1220,8 +1292,11 @@ app.get('/api/spotify/authorize-url', (req, res) => {
 // rejected there, loopback IP literals are not.
 app.get('/spotify/callback', async (req, res) => {
   if (req.query.error) {
-    spotifyAuth.cancel();
-    res.status(400).send(`Spotify-Anmeldung abgebrochen: ${req.query.error}`);
+    // Query parameters are attacker-controlled even on a loopback callback.
+    // Do not reflect Spotify's error text into HTML, and only let the
+    // callback that carries our unguessable state cancel an active flow.
+    if (spotifyAuth.hasPendingState(String(req.query.state || ''))) spotifyAuth.cancel();
+    res.status(400).send('Spotify-Anmeldung wurde abgebrochen. Du kannst das Fenster schließen und es erneut versuchen.');
     return;
   }
 

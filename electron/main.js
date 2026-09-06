@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, Tray, Menu, dialog, shell, clipboard, Notification, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, shell, clipboard, Notification, nativeImage } = require('electron');
+const { isInternalAppUrl } = require('./navigation-policy');
 
 const PORT = process.env.PORT || 4242;
 const BASE_URL = `http://localhost:${PORT}`;
@@ -141,6 +142,83 @@ function writeCloseBehavior(value) {
 
 // Clicking X twice before answering would otherwise stack dialogs.
 let closePromptOpen = false;
+let closeDialogWindow = null;
+
+// The dialog is a small SYNSA window rather than dialog.showMessageBox.
+//
+// The system message box could only ever be *worded* by us — its frame,
+// spacing, fonts and buttons stayed Windows grey in a program that is
+// charcoal and mint everywhere else. Nothing about the behaviour changes
+// here: the same three answers, the same "remember this" checkbox, the same
+// stored value in window-settings.json, which the settings page keeps
+// editing the way it did.
+//
+// The page comes from SYNSA's own loopback server like every other page, so
+// it reuses the theme; the only thing it is given beyond an ordinary page is
+// close-dialog-preload.js, which exposes exactly one function to answer with.
+function openCloseDialog(onChoice) {
+  closeDialogWindow = new BrowserWindow({
+    parent: mainWindow,
+    modal: true,
+    width: 460,
+    height: 288,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    frame: false,
+    backgroundColor: '#0f1414',
+    // Painted only once the page is ready, so the window never flashes an
+    // empty rectangle first.
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'close-dialog-preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  // Closing the dialog itself (Alt+F4) is a cancel, and so is any way it can
+  // disappear without an answer — the handler runs at most once either way.
+  const dialogWindow = closeDialogWindow;
+  let settled = false;
+
+  const onIpc = (event, choice) => {
+    // Only ever the window this call opened.
+    if (event.sender !== dialogWindow.webContents) return;
+    settle(choice);
+  };
+
+  const settle = (choice) => {
+    if (settled) return;
+    settled = true;
+    // Removed explicitly rather than relying on ipcMain.once: a dialog that
+    // is closed without answering never fires, and the listener would pile
+    // up one per close attempt.
+    ipcMain.removeListener('close-dialog:choice', onIpc);
+    // Closed before the answer is acted on, not after: 'quit' ends in
+    // app.quit(), and a modal child window still standing at that moment is
+    // exactly the kind of thing that can hold a shutdown open.
+    if (!dialogWindow.isDestroyed()) dialogWindow.close();
+    onChoice(choice);
+  };
+
+  ipcMain.on('close-dialog:choice', onIpc);
+
+  closeDialogWindow.once('ready-to-show', () => closeDialogWindow.show());
+  closeDialogWindow.on('closed', () => {
+    closeDialogWindow = null;
+    settle({ action: 'cancel', remember: false });
+  });
+
+  closeDialogWindow.loadURL(`${BASE_URL}/close-dialog.html`).catch((err) => {
+    // Unlike the old system dialog, loading a BrowserWindow is asynchronous.
+    // Never leave closePromptOpen locked if the local page cannot be reached;
+    // the historical fallback was to keep SYNSA running in the tray.
+    console.error('Close dialog failed:', err.message);
+    settle({ action: 'tray', remember: false });
+  });
+}
 
 const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
 
@@ -318,7 +396,7 @@ function openAppWindow(pagePath) {
   // either way, so the app window picks up the "connected" state live
   // over the WebSocket without needing to navigate anywhere itself.
   const sendExternal = (event, targetUrl) => {
-    if (!targetUrl.startsWith(BASE_URL)) {
+    if (!isInternalAppUrl(targetUrl, BASE_URL)) {
       event.preventDefault();
       shell.openExternal(targetUrl);
     }
@@ -333,7 +411,7 @@ function openAppWindow(pagePath) {
   mainWindow.webContents.on('will-redirect', sendExternal);
 
   mainWindow.webContents.setWindowOpenHandler(({ url: targetUrl }) => {
-    if (!targetUrl.startsWith(BASE_URL)) {
+    if (!isInternalAppUrl(targetUrl, BASE_URL)) {
       shell.openExternal(targetUrl);
     }
     return { action: 'deny' };
@@ -361,46 +439,31 @@ function openAppWindow(pagePath) {
     if (closePromptOpen) return;
     closePromptOpen = true;
 
-    // Async rather than showMessageBoxSync: only the async form reports the
-    // checkbox back. The close is already prevented above, so the window
-    // simply stays open until this resolves.
-    dialog
-      .showMessageBox(mainWindow, {
-        type: 'question',
-        title: 'SYNSA schließen',
-        message: 'Soll SYNSA im Hintergrund weiterlaufen?',
-        detail:
-          'Im Tray läuft SYNSA weiter: Alerts, Chat und die Overlays in OBS bleiben aktiv. Beim Beenden hören sie auf zu funktionieren, bis du SYNSA wieder startest.',
-        buttons: ['In den Tray minimieren', 'SYNSA beenden', 'Abbrechen'],
-        defaultId: 0,
-        cancelId: 2,
-        checkboxLabel: 'Diese Wahl merken',
-        checkboxChecked: false,
-        noLink: true,
-      })
-      .then(({ response, checkboxChecked }) => {
+    // The close is already prevented above, so the window simply stays open
+    // until the dialog answers.
+    try {
+      openCloseDialog(({ action, remember }) => {
         closePromptOpen = false;
 
         // Cancel leaves everything as it is — no hiding, no quitting.
-        if (response === 2) return;
+        if (action === 'cancel') return;
 
-        const chosen = response === 1 ? 'quit' : 'tray';
-        if (checkboxChecked) writeCloseBehavior(chosen);
+        if (remember) writeCloseBehavior(action);
 
-        if (chosen === 'quit') {
+        if (action === 'quit') {
           isQuitting = true;
           app.quit();
         } else {
           mainWindow.hide();
         }
-      })
-      .catch((err) => {
-        closePromptOpen = false;
-        // Never leave the user unable to close the window because a dialog
-        // failed — fall back to the behaviour this always had.
-        console.error('Close dialog failed:', err.message);
-        mainWindow.hide();
       });
+    } catch (err) {
+      closePromptOpen = false;
+      // Never leave the user unable to close the window because a dialog
+      // failed — fall back to the behaviour this always had.
+      console.error('Close dialog failed:', err.message);
+      mainWindow.hide();
+    }
   });
 
   mainWindow.on('closed', () => {

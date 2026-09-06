@@ -193,7 +193,7 @@
 
   // Rendered by shared/changelog.js, the same list the "Über SYNSA" section
   // in the settings shows.
-  loadChangelog(changelogBox);
+  loadChangelog(changelogBox, { onlyCurrent: true });
 
   // --- Actions ---------------------------------------------------------------
 
