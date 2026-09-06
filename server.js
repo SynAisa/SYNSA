@@ -85,7 +85,11 @@ const clients = new Set();
 // resetting.
 const state = {
   volume: 0.6,
-  twitch: { connected: false, channel: null },
+  // reauthRequired stays null in normal operation and becomes
+  // { reason, since } once Twitch has rejected this authorization for good —
+  // see twitch/eventsub.js markAuthRevoked(). It is what tells "not connected
+  // right now" apart from "needs to be linked again".
+  twitch: { connected: false, channel: null, reauthRequired: null },
   stream: { live: false, startedAt: null },
   emotes: {},
   music: { connected: false, title: null, artist: null, thumbnail: null, durationSeconds: 0, progressSeconds: 0, isPlaying: false },
@@ -95,6 +99,23 @@ const state = {
   // durationSeconds/label/accentColor/fontSize double as the settings
   // page's last-used values, so the form doesn't reset itself after Start.
   countdown: { running: false, endsAt: null, durationSeconds: 600, label: 'Starting Soon', accentColor: '#35C9A8', fontSize: 'medium' },
+  // A SYNSA-internal stream goal, counted from the alerts that already flow
+  // through recordAlert() — deliberately not Twitch's own Creator Goals
+  // (channel.goal.*), whose EventSub types only cover followers and
+  // tier-weighted subscriptions, so a bits or gift-sub goal is impossible
+  // there. target 0 means "nothing set up yet" and keeps the overlay empty.
+  goal: {
+    metric: 'follow',
+    target: 0,
+    current: 0,
+    label: 'Follower-Ziel',
+    accentColor: '#35C9A8',
+    startedAt: null,
+    // Which stream this count belongs to, so restarting SYNSA mid-stream
+    // doesn't look like a fresh offline -> live transition. See
+    // applyStreamStatus().
+    streamStartedAt: null,
+  },
   // Display options for overlay-music.html — separate from `music` above,
   // which is live playback data from YTMDesktop and gets wholesale
   // overwritten on every status update.
@@ -195,8 +216,45 @@ function pruneUnacknowledgedAlerts() {
   }
 }
 
+// Which OBS Browser Sources have ever announced themselves, and when each was
+// last seen. OBS shuts a Browser Source down while its scene is hidden, so
+// "not connected right now" says nothing about whether the source exists at
+// all — a remembered timestamp is what tells a hidden scene apart from one
+// that was never set up. In memory only: this is diagnostics, not
+// configuration, and a fresh process has every source reconnect within
+// seconds anyway.
+const OVERLAY_ROLES = {
+  overlay: 'alert',
+  'overlay-music': 'music',
+  'overlay-countdown': 'countdown',
+  'overlay-goal': 'goal',
+};
+
+const overlayPresence = new Map(
+  Object.values(OVERLAY_ROLES).map((key) => [key, { instances: new Map(), lastSeenAt: null }])
+);
+
 function primaryOverlay() {
   return overlayClients.values().next().value || null;
+}
+
+function describeOverlayPresence(key) {
+  const presence = overlayPresence.get(key);
+  const primary = primaryOverlay();
+  const instances = [...presence.instances].map(([client, meta]) => ({
+    id: meta.id,
+    connectedAt: meta.connectedAt,
+    // Only the alert overlay has a primary/secondary split (see
+    // sendOverlayRoles); for the other two the question doesn't apply.
+    primary: key === 'alert' ? client === primary : null,
+  }));
+
+  return {
+    connected: instances.length > 0,
+    count: instances.length,
+    lastSeenAt: instances.length > 0 ? Date.now() : presence.lastSeenAt,
+    instances,
+  };
 }
 
 function sendOverlayRoles() {
@@ -221,9 +279,17 @@ wss.on('connection', (ws) => {
       return;
     }
 
-    // An overlay announcing itself: it gets a primary/secondary role and,
-    // if it is the primary, everything that was missed while no overlay
-    // was listening.
+    // Any overlay announcing itself. All three record their presence so the
+    // diagnostics page can say whether they are set up in OBS at all; only
+    // the alert overlay additionally gets a primary/secondary role and, if it
+    // is the primary, everything that was missed while no overlay was
+    // listening.
+    if (msg.kind === 'register' && OVERLAY_ROLES[msg.role]) {
+      const presence = overlayPresence.get(OVERLAY_ROLES[msg.role]);
+      presence.instances.set(ws, { id: crypto.randomUUID().slice(0, 8), connectedAt: Date.now() });
+      presence.lastSeenAt = Date.now();
+    }
+
     if (msg.kind === 'register' && msg.role === 'overlay') {
       overlayClients.add(ws);
       sendOverlayRoles();
@@ -276,9 +342,18 @@ wss.on('connection', (ws) => {
     // path a real EventSub stream.online/offline event uses, so this drives
     // the one existing live/offline state rather than adding a second one.
     if (msg.kind === 'trigger-stream' && msg.status) {
-      state.stream = { ...state.stream, ...msg.status };
-      broadcast({ kind: 'stream-status', status: state.stream });
-      update.notifyStreamChanged();
+      applyStreamStatus(msg.status);
+    }
+
+    // Test hook mirroring the four above: puts the Twitch connection into the
+    // "this authorization is gone" state without needing a real revocation on
+    // Twitch's side, and takes it back out again with { revoked: false }.
+    // Goes through the exact same eventsub functions a real revocation uses,
+    // so it exercises the real behaviour rather than a parallel one — including
+    // that the stored tokens are left alone.
+    if (msg.kind === 'trigger-auth-revoked') {
+      if (msg.revoked === false) eventsub.clearAuthRevoked();
+      else eventsub.markAuthRevoked('simulated');
     }
 
     if (msg.kind === 'set-volume' && typeof msg.volume === 'number') {
@@ -323,6 +398,12 @@ wss.on('connection', (ws) => {
     // Losing the primary overlay promotes the next one, so a preview tab
     // takes over the sound instead of nothing playing at all.
     if (overlayClients.delete(ws)) sendOverlayRoles();
+
+    // The moment it goes away is exactly the "last seen" the diagnostics
+    // page needs — an OBS scene switch lands here.
+    for (const presence of overlayPresence.values()) {
+      if (presence.instances.delete(ws)) presence.lastSeenAt = Date.now();
+    }
   });
 });
 
@@ -351,6 +432,68 @@ function recordAlert(alert) {
   // "waiting" because the overlay's later alert-status reports carry it.
   broadcast({ kind: 'alert', alert, id: entry.id });
   broadcast({ kind: 'event-history-append', entry });
+
+  countTowardsGoal(alert);
+}
+
+// How much one alert is worth for each metric. Returns 0 for anything the
+// current metric doesn't count.
+function goalIncrementFor(alert) {
+  const data = alert.data || {};
+
+  if (state.goal.metric === 'follow') return alert.type === 'follow' ? 1 : 0;
+  if (state.goal.metric === 'bits') return alert.type === 'cheer' ? Number(data.bits) || 0 : 0;
+  if (alert.type !== 'subscription') return 0;
+
+  // A gift bomb is worth as many subs as it gifted — a goal of "20 new subs"
+  // that a single 20-gift bomb didn't move would read as broken. giftCount is
+  // absent on older/edge payloads, so a gift with no count is worth one.
+  const gifted = Number(data.giftCount) || 1;
+  if (state.goal.metric === 'giftsub') return data.isGift ? gifted : 0;
+  return data.isGift ? gifted : 1;
+}
+
+// Rides on the path every alert already takes, so there is no second source
+// of events to keep in sync — and the existing trigger-alert test hook
+// exercises it exactly like a real Twitch event does.
+function countTowardsGoal(alert) {
+  if (!(state.goal.target > 0)) return;
+
+  const increment = goalIncrementFor(alert);
+  if (!increment) return;
+
+  state.goal = { ...state.goal, current: state.goal.current + increment };
+  saveGoal();
+  broadcast({ kind: 'goal-status', status: state.goal });
+}
+
+function resetGoal(streamStartedAt = state.goal.streamStartedAt) {
+  state.goal = { ...state.goal, current: 0, startedAt: Date.now(), streamStartedAt };
+  saveGoal();
+  broadcast({ kind: 'goal-status', status: state.goal });
+}
+
+// The one place a stream going live or offline lands. Both the real EventSub
+// stream.online/offline events and the trigger-stream test hook go through
+// here, so the goal's automatic reset can't end up wired to only one of them.
+function applyStreamStatus(status) {
+  const wasLive = state.stream.live;
+  state.stream = { ...state.stream, ...status };
+  broadcast({ kind: 'stream-status', status: state.stream });
+  // A ready-and-waiting update must immediately reflect the stream lock the
+  // instant it changes, not just at the moment it was downloaded.
+  update.notifyStreamChanged();
+
+  if (wasLive || !state.stream.live) return;
+
+  // Offline -> live starts a fresh count. Compared against the stream's own
+  // start time first: EventSub reports an already-running stream again when
+  // SYNSA boots, which is indistinguishable from a real transition here and
+  // would otherwise throw away a count mid-stream.
+  const startedAt = state.stream.startedAt || null;
+  if (!startedAt || startedAt !== state.goal.streamStartedAt) {
+    resetGoal(startedAt);
+  }
 }
 
 function recordChatMessage(message) {
@@ -389,13 +532,7 @@ eventsub.init({
       });
     }
   },
-  onStream: (status) => {
-    state.stream = status;
-    broadcast({ kind: 'stream-status', status });
-    // A ready-and-waiting update must immediately reflect the stream lock
-    // the instant it changes, not just at the moment it was downloaded.
-    update.notifyStreamChanged();
-  },
+  onStream: (status) => applyStreamStatus(status),
 });
 
 // With YTMDesktop closed, socket.io retries forever and every failed
@@ -438,6 +575,49 @@ update.onChange((updateState) => {
 // window title) — reads package.json rather than duplicating the number.
 app.get('/api/version', (req, res) => {
   res.json({ version: require('./package.json').version });
+});
+
+// --- Diagnostics ------------------------------------------------------------
+
+// One read-only snapshot of everything that can plausibly be wrong, so a user
+// can see it themselves (or screenshot it for support) instead of describing
+// symptoms. Deliberately has no controls of its own: it only reads state that
+// already exists elsewhere, and changes nothing.
+app.get('/api/diagnostics', (req, res) => {
+  const twitch = state.twitch || {};
+  const twitchConnected = Boolean(twitch.connected);
+  const failedTypes = new Map(((twitch.subscriptions || {}).failed || []).map((f) => [f.type, f.message]));
+  const updateState = update.getState();
+
+  res.json({
+    generatedAt: Date.now(),
+    version: require('./package.json').version,
+    server: { port: PORT, ...listenState },
+    twitch: {
+      connected: twitchConnected,
+      channel: twitch.channel || null,
+      reauthRequired: twitch.reauthRequired || null,
+      subscriptions: eventsub.getSubscriptionTypes().map((type) => ({
+        type,
+        // null rather than false while disconnected: with no session there
+        // are no subscriptions at all, so "failed" would be a lie.
+        ok: twitchConnected ? !failedTypes.has(type) : null,
+        message: failedTypes.get(type) || null,
+      })),
+    },
+    overlays: {
+      alert: describeOverlayPresence('alert'),
+      music: describeOverlayPresence('music'),
+      countdown: describeOverlayPresence('countdown'),
+      goal: describeOverlayPresence('goal'),
+    },
+    music: { paired: Boolean(musicTokenStore.load()), connected: music.isConnected() },
+    update: {
+      phase: updateState.phase,
+      currentVersion: updateState.currentVersion,
+      availableVersion: updateState.release ? updateState.release.version : null,
+    },
+  });
 });
 
 // --- Updates (Phase 2A: local test provider only, see update/manager.js) ---
@@ -963,6 +1143,98 @@ app.post('/api/countdown/stop', (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Stream goal -------------------------------------------------------------
+
+// Same load/save shape as the countdown above. The running count is part of
+// what's saved, not just the settings: a goal is supposed to survive a
+// restart mid-stream — the only thing that clears it is a new stream going
+// live or the reset button.
+const GOAL_FILE = path.join(DATA_DIR, 'goal.json');
+
+function loadGoal() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(GOAL_FILE, 'utf8'));
+    return {
+      ...state.goal,
+      ...saved,
+      // Guards against a hand-edited or half-written file turning the
+      // overlay into NaN of NaN.
+      target: Number(saved.target) || 0,
+      current: Number(saved.current) || 0,
+      metric: GOAL_METRICS.has(saved.metric) ? saved.metric : state.goal.metric,
+    };
+  } catch {
+    return state.goal;
+  }
+}
+
+function saveGoal() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(GOAL_FILE, JSON.stringify(state.goal));
+  } catch (err) {
+    console.error('Could not save goal:', err.message);
+  }
+}
+
+// Deliberately SYNSA's own metrics rather than Twitch's Creator Goals: bits
+// and gift subs have no channel.goal.* equivalent at all, and everything here
+// is derived from alerts SYNSA already receives — no extra scope, no extra
+// subscription.
+const GOAL_METRICS = new Set(['follow', 'subscription', 'giftsub', 'bits']);
+const MAX_GOAL_TARGET = 10000000;
+
+state.goal = loadGoal();
+
+app.get('/api/goal/status', (req, res) => {
+  res.json(state.goal);
+});
+
+app.post('/api/goal/settings', (req, res) => {
+  const target = Math.round(Number(req.body.target));
+  if (!Number.isFinite(target) || target < 1 || target > MAX_GOAL_TARGET) {
+    res.status(400).json({ error: 'Ungültiger Zielwert' });
+    return;
+  }
+  if (!GOAL_METRICS.has(req.body.metric)) {
+    res.status(400).json({ error: 'Unbekannte Metrik' });
+    return;
+  }
+
+  // Same reasoning as the countdown's label handling: an empty field keeps
+  // the stored value instead of wiping it.
+  const trimmedLabel = typeof req.body.label === 'string' ? req.body.label.trim().slice(0, 60) : '';
+  const accentColor = HEX_COLOR_RE.test(req.body.accentColor) ? req.body.accentColor : state.goal.accentColor;
+
+  // Switching metric starts over — bits counted into a follower goal would be
+  // nonsense. Raising or lowering the target of the same metric keeps the
+  // count, which is the whole point of being able to adjust it mid-stream.
+  const metricChanged = req.body.metric !== state.goal.metric;
+
+  state.goal = {
+    ...state.goal,
+    metric: req.body.metric,
+    target,
+    label: trimmedLabel || state.goal.label,
+    accentColor,
+    current: metricChanged ? 0 : state.goal.current,
+    startedAt: metricChanged || state.goal.startedAt === null ? Date.now() : state.goal.startedAt,
+  };
+  saveGoal();
+  broadcast({ kind: 'goal-status', status: state.goal });
+  res.json({ ok: true });
+});
+
+// Manual reset, for a goal that is meant to run across several streams and
+// should restart on the streamer's word rather than on the next stream.online.
+app.post('/api/goal/reset', (req, res) => {
+  resetGoal();
+  res.json({ ok: true });
+});
+
+// Filled in by the boot sequence below once the listeners are up.
+let listenState = { startedAt: null, boundHosts: [], failedHosts: [] };
+
 function listenOn(srv, host) {
   return new Promise((resolve, reject) => {
     const onError = (err) => reject(Object.assign(err, { host }));
@@ -991,6 +1263,17 @@ const ready = (async () => {
   for (const failed of results.filter((r) => r.status === 'rejected')) {
     console.warn(`Could not bind ${failed.reason.host}: ${failed.reason.message}`);
   }
+
+  // Kept for /api/diagnostics: "localhost" resolves to ::1 first on Windows,
+  // so a source that cannot reach SYNSA while another one can is almost
+  // always a half-bound port — worth being able to see rather than guess.
+  listenState = {
+    startedAt: Date.now(),
+    boundHosts: bound.map((r) => r.value),
+    failedHosts: results
+      .filter((r) => r.status === 'rejected')
+      .map((r) => ({ host: r.reason.host, message: r.reason.message })),
+  };
 
   console.log(`SYNSA server running on http://localhost:${PORT}`);
   console.log(`  Overlay (OBS Browser Source): http://localhost:${PORT}/overlay.html`);

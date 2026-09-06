@@ -1,0 +1,81 @@
+/* Goal settings page. Structure (.page, .card, .card-title, labels, buttons,
+   .color-hex-row) comes from control.css like every other settings page —
+   this only adds the progress bar and its two rows. No new colours: the bar
+   uses the accent the user picked, on the same faint track the update
+   banner's progress bar uses. */
+
+.goal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.goal-actions button {
+  margin-top: 0;
+}
+
+#goal-reset-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+#goal-reset-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.goal-preview {
+  --goal-accent: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goal-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.goal-preview-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.goal-preview-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--goal-accent);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.goal-preview-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(241, 245, 243, 0.08);
+  overflow: hidden;
+}
+
+.goal-preview-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--goal-accent);
+  transition: width 240ms ease;
+}
+
+.goal-since {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.goal-color-label {
+  max-width: 240px;
+}

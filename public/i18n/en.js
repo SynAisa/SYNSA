@@ -44,6 +44,79 @@ window.SynsaTranslationsEn = {
   'SYNSA wird neu gestartet …': 'Restarting SYNSA…',
   'Aktualisierung wird abgeschlossen. SYNSA wird gleich neu gestartet.':
     'Finishing the update. SYNSA will restart in a moment.',
+
+  // Ziel
+  Ziel: 'Goal',
+  'Ein Stream-Ziel, das SYNSA aus den eigenen Alerts zählt — unabhängig von Twitchs Creator Goals, deshalb sind auch Bits und Gift-Subs möglich. Die Zählung startet automatisch neu, sobald der Stream live geht.':
+    'A stream goal SYNSA counts from its own alerts — independent of Twitch Creator Goals, which is why bits and gift subs are possible too. The count restarts automatically as soon as the stream goes live.',
+  'Was wird gezählt': 'What is counted',
+  Follower: 'Followers',
+  'Neue Subs': 'New subs',
+  'Gift-Subs': 'Gift subs',
+  // "Bits" steht bereits weiter unten in dieser Tabelle.
+  Zielwert: 'Target',
+  'Ziel speichern': 'Save goal',
+  Zurücksetzen: 'Reset',
+  'Aktueller Stand': 'Current progress',
+  'Gezählt seit': 'Counted since',
+  'Ziel-Overlay': 'Goal overlay',
+  'Follower-Ziel': 'Follower goal',
+
+  // Diagnose
+  Diagnose: 'Diagnostics',
+  'Diese Seite zeigt nur an und ändert nichts. Bei Problemen ist ein Screenshot davon die schnellste Art, den Zustand weiterzugeben.':
+    'This page only displays; it changes nothing. If something is wrong, a screenshot of it is the fastest way to pass the state on.',
+  'Overlays in OBS': 'Overlays in OBS',
+  Musik: 'Music',
+  Server: 'Server',
+  // "Verbindung", "Kanal", "Music-Overlay", "Installierte Version" und
+  // "Fehler" stehen bereits weiter unten in dieser Tabelle.
+  'EventSub-Subscriptions': 'EventSub subscriptions',
+  OK: 'OK',
+  Fehlgeschlagen: 'Failed',
+  'Keine Verbindung': 'No connection',
+  'Twitch hat den Zugriff abgelehnt — SYNSA muss neu verknüpft werden.':
+    'Twitch rejected access — SYNSA has to be linked again.',
+  'Alert-Overlay': 'Alert overlay',
+  'Countdown-Overlay': 'Countdown overlay',
+  'Verbunden ({n})': 'Connected ({n})',
+  'Gerade nicht sichtbar': 'Not visible right now',
+  'Noch nie verbunden': 'Never connected',
+  'Diese Browser Source ist in OBS noch nicht eingerichtet.': 'This browser source is not set up in OBS yet.',
+  'Zuletzt gesehen': 'Last seen',
+  'Primär (Ton + Warteschlange)': 'Primary (sound + queue)',
+  'YTMDesktop gekoppelt': 'YTMDesktop paired',
+  Ja: 'Yes',
+  Nein: 'No',
+  'Gekoppelt, aber keine Verbindung — läuft die YouTube-Music-App?':
+    'Paired but not connected — is the YouTube Music app running?',
+  Status: 'Status',
+  'Verfügbare Version': 'Available version',
+  Aktuell: 'Up to date',
+  'Suche läuft': 'Checking',
+  'Update verfügbar': 'Update available',
+  'Wird heruntergeladen': 'Downloading',
+  'Bereit zur Installation': 'Ready to install',
+  'Wird installiert': 'Installing',
+  Port: 'Port',
+  Gebunden: 'Bound',
+  'Nicht gebunden': 'Not bound',
+  Gestartet: 'Started',
+  Stand: 'As of',
+  'gerade eben': 'just now',
+  'vor 1 Sekunde': '1 second ago',
+  'vor {n} Sekunden': '{n} seconds ago',
+  'vor 1 Minute': '1 minute ago',
+  'vor {n} Minuten': '{n} minutes ago',
+  'vor 1 Stunde': '1 hour ago',
+  'vor {n} Stunden': '{n} hours ago',
+  'vor 1 Tag': '1 day ago',
+  'vor {n} Tagen': '{n} days ago',
+
+  'Twitch-Verbindung nicht mehr gültig': 'Twitch connection no longer valid',
+  'Alerts und Chat kommen nicht mehr an. Bitte verknüpfe SYNSA erneut mit Twitch.':
+    'Alerts and chat are no longer coming through. Please link SYNSA with Twitch again.',
+  'Neu verknüpfen': 'Link again',
   'Der Update-Check ist fehlgeschlagen.': 'The update check failed.',
   'Das Update konnte nicht heruntergeladen werden.': 'The update could not be downloaded.',
   'Die Installation konnte nicht vorbereitet werden.': 'The installation could not be prepared.',
@@ -117,6 +190,11 @@ window.SynsaTranslationsEn = {
   'Dashboard-Rundgang starten': 'Start dashboard tour',
   'Rundgang schließen': 'Close tour',
   Fertig: 'Done',
+
+  'Willkommen zu SYNSA': 'Welcome to SYNSA',
+  'Willkommen zu SYNSA, deinem Twitch-Terminal.': 'Welcome to SYNSA, your Twitch terminal.',
+  'Dieser kurze Rundgang zeigt dir in drei Schritten, wofür die Bereiche des Dashboards da sind.':
+    'This short tour walks you through the three parts of the dashboard and what each is for.',
 
   'Hier kannst du die Kategorie und den Titel deines Streams festlegen. Änderungen werden direkt auf Twitch übernommen. Dafür muss dein Twitch-Konto mit SYNSA verknüpft sein.':
     'Here you set your stream’s title and category. Changes are applied on Twitch straight away. Your Twitch account has to be linked to SYNSA for that.',
@@ -262,6 +340,10 @@ window.SynsaTranslationsEn = {
   '"Starting Soon"-Countdown für OBS. Dauer eingeben und starten — die Overlay-Quelle zählt live mit, egal wann sie geladen wird.':
     '"Starting Soon" countdown for OBS. Enter a duration and start it — the overlay source counts along live, no matter when it is loaded.',
   'Schriftgröße': 'Font size',
+  // Fehlten bisher — dieselben Beschriftungen stehen auf der Countdown- und
+  // der Ziel-Seite, beide blieben deutsch.
+  Anzeigetext: 'Display text',
+  Akzentfarbe: 'Accent colour',
   'Läuft noch: {t}': '{t} remaining',
   'Min.': 'min',
   'Sek.': 'sec',

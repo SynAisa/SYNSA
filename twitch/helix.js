@@ -9,6 +9,15 @@ const HELIX_URL = 'https://api.twitch.tv/helix';
 // is no secret anywhere anymore). Everything else about refreshing is
 // unchanged — including that Twitch hands back a new refresh token every
 // time, which the caller below stores.
+//
+// Two failure kinds have to stay apart here. A network error (fetch throws)
+// or a 5xx from Twitch is temporary — the caller should keep retrying, and
+// nothing about that path changes. A 400/401 from the token endpoint means
+// Twitch itself rejected the refresh token (invalid_grant: the user removed
+// SYNSA from their Twitch connections, changed their password, or the token
+// expired after 30 days of inactivity). Retrying that can never succeed, so
+// the error carries a flag the caller can act on. The message stays exactly
+// as it was — this only adds a marker next to it.
 async function refreshAccessToken(refreshToken) {
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -18,7 +27,11 @@ async function refreshAccessToken(refreshToken) {
 
   const res = await fetch(TOKEN_URL, { method: 'POST', body: params });
   if (!res.ok) {
-    throw new Error(`Token refresh failed: ${res.status} ${await res.text()}`);
+    const err = new Error(`Token refresh failed: ${res.status} ${await res.text()}`);
+    if (res.status === 400 || res.status === 401) {
+      err.authRevoked = true;
+    }
+    throw err;
   }
   return res.json();
 }

@@ -106,6 +106,13 @@
   background: var(--highlight);
 }
 
+/* The auth banner (shared/auth-banner.js) uses a link rather than a button
+   for its action, because it navigates to setup.html. */
+a.update-banner-primary {
+  display: inline-block;
+  text-decoration: none;
+}
+
 .update-banner-primary.is-blocked {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-muted);

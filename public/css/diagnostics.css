@@ -1,0 +1,97 @@
+/* Diagnostics page. Everything structural (.page, .card, .card-title,
+   .status, .hint) comes from control.css, exactly like settings.html —
+   this file only adds the row/state list that is specific to this page.
+
+   No new colours: mint (--accent) for "fine", the amber already used by
+   .subscription-warning and the critical update banner (--type-cheer) for
+   "needs attention", muted text for "nothing to say yet". */
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.diag-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diag-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(241, 245, 243, 0.06);
+  font-size: 13px;
+}
+
+.diag-row:last-child {
+  border-bottom: none;
+}
+
+.diag-label {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.diag-value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.diag-value.is-ok {
+  color: var(--accent);
+}
+
+.diag-value.is-problem {
+  color: var(--type-cheer, #d9a75c);
+}
+
+.diag-value.is-neutral {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Second line under a row: the failure message, the "last seen" note, the
+   session id of an overlay instance. */
+.diag-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  padding: 0 0 6px;
+  margin-top: -4px;
+  overflow-wrap: anywhere;
+}
+
+.diag-note.is-problem {
+  color: var(--type-cheer, #d9a75c);
+}
+
+/* The nine EventSub types are a list inside the Twitch card, not their own
+   card — they only make sense next to the connection state above them. */
+.diag-subhead {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 10px;
+  padding-bottom: 2px;
+}
+
+.diag-row.is-compact {
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.diag-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+}

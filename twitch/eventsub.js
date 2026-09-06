@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 const helix = require('./helix');
 const tokenStore = require('./tokenStore');
 const seventv = require('./seventv');
+const { isAuthorizationRevoked } = require('./revocation');
 const { mapEventSubNotification } = require('./mapEvents');
 const { mapChatMessage } = require('./mapChat');
 
@@ -41,6 +42,11 @@ let reconnectTimer = null;
 let reconnectAttempts = 0;
 let failedSubscriptions = [];
 let stopped = true;
+// null while everything is normal. Set to { reason, since } once Twitch has
+// made clear that this authorization is gone for good — see markAuthRevoked().
+// Deliberately not persisted and never used to delete tokens: it only records
+// that reconnecting cannot help until the user links SYNSA again.
+let reauthRequired = null;
 let onAlertCallback = () => {};
 let onChatCallback = () => {};
 let onStatusCallback = () => {};
@@ -81,6 +87,14 @@ async function runStart() {
   try {
     broadcasterUser = await helix.getSelfUser();
   } catch (err) {
+    // Twitch rejected the refresh token itself (see helix.refreshAccessToken).
+    // Retrying is pointless — every attempt would be rejected the same way —
+    // so stop and say so instead of backing off forever in silence.
+    if (err.authRevoked) {
+      markAuthRevoked('refresh-rejected');
+      return;
+    }
+
     // Typically the network isn't up yet (autostart on boot). Without a
     // retry here the app stayed disconnected until it was restarted by
     // hand, because nothing had scheduled a reconnect at this point.
@@ -95,6 +109,10 @@ async function runStart() {
     }, nextReconnectDelay());
     return;
   }
+
+  // Getting this far means the token works, so whatever was wrong before is
+  // over — a successful call is the only thing that clears the flag.
+  clearAuthRevoked();
 
   await seventv.refresh(broadcasterUser.id).catch(() => {});
   hasSubscribed = false;
@@ -112,8 +130,58 @@ async function runStart() {
   }
 }
 
+// Everything stop() does to the connection, minus the parts that only make
+// sense when the user deliberately disconnects. The tokens stay untouched on
+// purpose (requirement: only an explicit disconnect or a fresh setup run may
+// remove them) and broadcasterUser is kept so the banner can still name the
+// channel. What this really buys is `stopped = true`, which is what
+// scheduleReconnect() and the watchdog check before doing anything.
+function markAuthRevoked(reason) {
+  if (reauthRequired) return;
+
+  console.error(`Twitch authorization is no longer valid (${reason}) — stopping reconnects until SYNSA is linked again.`);
+  reauthRequired = { reason, since: Date.now() };
+
+  stopped = true;
+  clearTimeout(reconnectTimer);
+  reconnectTimer = null;
+  clearInterval(watchdogTimer);
+  watchdogTimer = null;
+
+  const current = ws;
+  // Cleared before closing so the socket's own close handler sees
+  // `socket === ws` as false and does not schedule a reconnect.
+  ws = null;
+  hasSubscribed = false;
+  currentSessionId = null;
+
+  if (current) {
+    try {
+      current.close();
+    } catch {
+      // already closed
+    }
+  }
+
+  setStatus(false);
+  setStreamStatus(false, null);
+}
+
+function clearAuthRevoked() {
+  if (!reauthRequired) return;
+  console.log('Twitch authorization works again.');
+  reauthRequired = null;
+  // Only ever reached while disconnected — the flag is what kept the socket
+  // from coming back — so this broadcast takes the banner down as soon as the
+  // token works again, without waiting for the connection to finish coming up.
+  setStatus(false);
+}
+
 function stop() {
   stopped = true;
+  // A deliberate disconnect is not a state anyone needs to fix — dropping the
+  // flag keeps the banner from outliving the connection it was about.
+  reauthRequired = null;
   clearTimeout(reconnectTimer);
   reconnectTimer = null;
   clearInterval(watchdogTimer);
@@ -280,11 +348,16 @@ async function handleMessage(socket, raw) {
   }
 
   if (messageType === 'revocation') {
-    console.warn(
-      'EventSub subscription revoked:',
-      msg.payload.subscription.type,
-      msg.payload.subscription.status
-    );
+    const status = msg.payload.subscription.status;
+    console.warn('EventSub subscription revoked:', msg.payload.subscription.type, status);
+
+    // The status field says which of the three revocation reasons this is —
+    // see twitch/revocation.js. One message with authorization_revoked is
+    // enough and unambiguous; user_removed and version_removed keep the normal
+    // reconnect behaviour they have always had.
+    if (isAuthorizationRevoked(status)) {
+      markAuthRevoked('subscriptions-revoked');
+    }
   }
 }
 
@@ -314,6 +387,10 @@ function setStatus(connected) {
     channel: broadcasterUser ? broadcasterUser.display_name : null,
     broadcasterId: broadcasterUser ? broadcasterUser.id : null,
     sessionId: connected ? currentSessionId : null,
+    // Tells "SYNSA is not connected right now" apart from "Twitch will not let
+    // SYNSA back in until it is linked again". Rides along on the existing
+    // twitch-status broadcast, so no page needs new plumbing to see it.
+    reauthRequired,
     emotes: connected ? seventv.toObject() : {},
     // A failed subscription used to be a console line nobody would ever
     // read — which is exactly how stream.online stayed broken unnoticed.
@@ -332,4 +409,20 @@ function getBroadcasterId() {
   return broadcasterUser ? broadcasterUser.id : null;
 }
 
-module.exports = { init, start, stop, isRunning, getBroadcasterId };
+// The full list of types SYNSA subscribes to, so the diagnostics page can show
+// every one of them with an OK/failed mark instead of only the failures that
+// setStatus() reports. Exported rather than copied: one list, here.
+function getSubscriptionTypes() {
+  return SUBSCRIPTIONS.map((sub) => sub.type);
+}
+
+module.exports = {
+  init,
+  start,
+  stop,
+  isRunning,
+  getBroadcasterId,
+  getSubscriptionTypes,
+  markAuthRevoked,
+  clearAuthRevoked,
+};

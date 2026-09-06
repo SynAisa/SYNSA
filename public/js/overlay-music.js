@@ -229,6 +229,11 @@
 
     ws.addEventListener('open', () => {
       retryDelay = 1500;
+      // Announces this source the way overlay.js does. Nothing here depends
+      // on it — there is no primary/secondary role for the music overlay —
+      // but it is the only way the server can tell whether this overlay is
+      // set up in OBS at all, which the diagnostics page reports.
+      ws.send(JSON.stringify({ kind: 'register', role: 'overlay-music' }));
     });
 
     ws.addEventListener('message', (event) => {

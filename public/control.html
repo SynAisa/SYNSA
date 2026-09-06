@@ -10,6 +10,9 @@
 <link rel="stylesheet" href="/css/theme.css">
 <link rel="stylesheet" href="/css/control.css">
 <link rel="stylesheet" href="/css/nav.css">
+<!-- For the shared auth banner below, which renders with the .update-banner
+     classes so it stays the same component the other pages show. -->
+<link rel="stylesheet" href="/css/update.css">
 </head>
 <body>
   <div class="page">
@@ -20,6 +23,8 @@
       </div>
       <div id="status" class="status">Verbinde…</div>
     </header>
+
+    <div id="auth-banner" hidden></div>
 
     <p class="hint">
       Overlay als OBS Browser Source:
@@ -143,6 +148,7 @@
   <script src="/shared/alert-types.js"></script>
   <script src="/shared/module-menu.js"></script>
   <script src="/shared/reveal-copy.js"></script>
+  <script src="/shared/auth-banner.js"></script>
   <script src="/js/sounds.js"></script>
   <script src="/shared/page-socket.js"></script>
   <script src="/js/control.js"></script>

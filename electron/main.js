@@ -327,6 +327,7 @@ function createTray() {
     { label: 'Control-Panel öffnen', click: () => openAppWindow('control.html') },
     { label: 'Music-Overlay-Einstellungen öffnen', click: () => openAppWindow('music-settings.html') },
     { label: 'Countdown-Einstellungen öffnen', click: () => openAppWindow('countdown-settings.html') },
+    { label: 'Ziel-Einstellungen öffnen', click: () => openAppWindow('goal-settings.html') },
     { type: 'separator' },
     {
       label: 'Overlay-URL kopieren',
@@ -349,7 +350,15 @@ function createTray() {
         notify('Countdown-Overlay-URL kopiert', `${BASE_URL}/overlay-countdown.html`);
       },
     },
+    {
+      label: 'Ziel-Overlay-URL kopieren',
+      click: () => {
+        clipboard.writeText(`${BASE_URL}/overlay-goal.html`);
+        notify('Ziel-Overlay-URL kopiert', `${BASE_URL}/overlay-goal.html`);
+      },
+    },
     { label: 'Twitch-Zugangsdaten ändern', click: () => openAppWindow('setup.html') },
+    { label: 'Diagnose öffnen', click: () => openAppWindow('diagnostics.html') },
     ...(app.isPackaged
       ? [
           {

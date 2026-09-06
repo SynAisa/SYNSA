@@ -30,6 +30,11 @@
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/><path d="M9.5 2.5h5"/><path d="M18.5 5.5 20 4"/></svg>',
     },
     {
+      label: 'Ziel',
+      href: '/goal-settings.html',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 4V2"/></svg>',
+    },
+    {
       label: 'Test-Alerts / Control-Panel',
       href: '/control.html',
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>',
@@ -43,6 +48,11 @@
       label: 'Einstellungen',
       href: '/settings.html',
       icon: GEAR_ICON,
+    },
+    {
+      label: 'Diagnose',
+      href: '/diagnostics.html',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12L16 12h5"/></svg>',
     },
     {
       label: 'Über SYNSA',

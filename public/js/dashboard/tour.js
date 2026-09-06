@@ -22,6 +22,19 @@
   const STORAGE_KEY = 'synsa.dashboardTour.v1';
 
   const STEPS = [
+    // Opens the tour without highlighting anything: right after the setup this
+    // is the first thing a new user sees, so it says what SYNSA is before it
+    // starts pointing at panels. It carries no step counter — the tour still
+    // has three stops, this is the greeting in front of them.
+    {
+      intro: true,
+      selector: null,
+      title: 'Willkommen zu SYNSA',
+      paragraphs: [
+        'Willkommen zu SYNSA, deinem Twitch-Terminal.',
+        'Dieser kurze Rundgang zeigt dir in drei Schritten, wofür die Bereiche des Dashboards da sind.',
+      ],
+    },
     {
       selector: '.stream-info-panel',
       title: 'Stream-Info',
@@ -159,10 +172,18 @@
   // fixed stops in a layout that always fills exactly one screen, this covers
   // every case the tour can actually reach.
   function positionCard(target) {
-    const targetRect = target.getBoundingClientRect();
     const cardRect = cardEl.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+
+    // The greeting points at nothing, so it belongs in the middle.
+    if (!target) {
+      cardEl.style.left = `${Math.max(VIEWPORT_MARGIN, (vw - cardRect.width) / 2)}px`;
+      cardEl.style.top = `${Math.max(VIEWPORT_MARGIN, (vh - cardRect.height) / 2)}px`;
+      return;
+    }
+
+    const targetRect = target.getBoundingClientRect();
 
     let left;
     let top;
@@ -189,10 +210,11 @@
     if (index < 0 || index >= STEPS.length) return;
 
     const step = STEPS[index];
-    const target = document.querySelector(step.selector);
+    const target = step.selector ? document.querySelector(step.selector) : null;
     // A panel the dashboard doesn't have is not worth stopping the tour over —
     // skip ahead instead of leaving the user in a dimmed room with nothing lit.
-    if (!target) {
+    // The greeting has no selector at all and is not affected by this.
+    if (step.selector && !target) {
       if (index > currentIndex) show(index + 1);
       else show(index - 1);
       return;
@@ -201,8 +223,10 @@
     currentIndex = index;
 
     clearHighlight();
-    target.classList.add(HIGHLIGHT_CLASS);
-    highlighted = target;
+    if (target) {
+      target.classList.add(HIGHLIGHT_CLASS);
+      highlighted = target;
+    }
 
     titleEl.textContent = t(step.title);
 
@@ -213,8 +237,11 @@
       textEl.appendChild(p);
     });
 
-    // Digits and a slash read the same in both languages.
-    progressEl.textContent = `${index + 1} / ${STEPS.length}`;
+    // Counted over the three stops only, so the greeting in front of them
+    // doesn't turn the tour into "1 / 4". Digits and a slash read the same in
+    // both languages.
+    const stops = STEPS.filter((s) => !s.intro).length;
+    progressEl.textContent = step.intro ? '' : `${index} / ${stops}`;
 
     const isFirst = index === 0;
     const isLast = index === STEPS.length - 1;
@@ -231,8 +258,8 @@
   function onResize() {
     const step = STEPS[currentIndex];
     if (!step) return;
-    const target = document.querySelector(step.selector);
-    if (target) positionCard(target);
+    // Passing null re-centres the greeting, which has no panel to sit next to.
+    positionCard(step.selector ? document.querySelector(step.selector) : null);
   }
 
   function finish() {

@@ -20,6 +20,7 @@
 // ever loaded when SYNSA_UPDATE_PROVIDER=production, which only makes sense
 // running under the real packaged app, never under plain `node server.js`.
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
@@ -147,9 +148,110 @@ function checkForUpdate() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Differential downloads: keeping the two halves of the updater cache in sync
+// ---------------------------------------------------------------------------
+//
+// electron-updater can download only the changed blocks of a new installer
+// instead of the whole ~107 MB file. To do that it needs two things that live
+// side by side in %LOCALAPPDATA%\synsa-updater\:
+//
+//   installer.exe      — written by the NSIS installer while it installs
+//                        (app-builder-lib templates/nsis/include/installer.nsh:
+//                        copyFile "$EXEPATH" "$LOCALAPPDATA\...\installer.exe")
+//   current.blockmap   — written by electron-updater right after it *downloads*
+//                        an installer (AppUpdater.js executeDownload(): the
+//                        pending copy is moved up into the cache root in done())
+//
+// It then reads the old block map from the cache if one is there, and only
+// falls back to downloading it from the release URL when it is not
+// (AppUpdater.js differentialDownloadInstaller: getBlockMapFromCacheDir() ??
+// downloadBlockMap()). Nothing verifies that the two files describe the same
+// version — the library simply assumes that whatever was downloaded last is
+// also what is installed.
+//
+// SYNSA breaks that assumption on purpose: autoDownload is off, and
+// downloading and installing are two separate user decisions. Download 0.1.10
+// and never install it, and the cache holds 0.1.10's block map next to 0.1.9's
+// installer.exe. The next update then copies blocks from offsets that are only
+// valid for 0.1.10 out of a file that is still 0.1.9 — the assembled installer
+// is garbage, the final sha512 check catches it, and electron-updater falls
+// back to the full download. That is exactly the failure recorded in
+// synsa.log for 0.1.3 -> 0.1.4 ("sha512 checksum mismatch ... fallback to
+// full download").
+//
+// electron-updater offers no option to keep the two in sync
+// (disableDifferentialDownload only turns the feature off entirely, and
+// previousBlockmapBaseUrlOverride only changes *where* the old block map is
+// fetched from, not whether the stale cached one is preferred). So we remove
+// the cached block map before every download. electron-updater then takes its
+// own documented fallback and fetches the block map belonging to the version
+// this app actually is — which is by construction the same version
+// installer.exe came from, because the installer of that version wrote it.
+//
+// Cost: one extra ~120 KB request per update. In exchange the copy source and
+// the block map can no longer disagree, so a small update really does transfer
+// only its changed blocks.
+function resolveBaseCachePath() {
+  // Mirrors electron-updater's AppAdapter.getAppCacheDir().
+  if (process.platform === 'win32') {
+    return process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Caches');
+  }
+  return process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+}
+
+async function resolveUpdaterCacheDir() {
+  // electron-updater already knows this path, so ask it rather than keeping a
+  // second copy of the derivation that could drift. The method is internal, so
+  // if it ever disappears we compute the same thing it computes:
+  // path.join(getAppCacheDir(), updaterCacheDirName ?? app.getName()).
+  try {
+    if (typeof autoUpdater.getOrCreateDownloadHelper === 'function') {
+      const helper = await autoUpdater.getOrCreateDownloadHelper();
+      if (helper && typeof helper.cacheDir === 'string' && helper.cacheDir) {
+        return helper.cacheDir;
+      }
+    }
+  } catch {
+    // Fall through to the local derivation below.
+  }
+
+  let cacheDirName = null;
+  try {
+    const config = fs.readFileSync(path.join(process.resourcesPath, 'app-update.yml'), 'utf8');
+    const match = /^updaterCacheDirName:\s*(\S+)\s*$/m.exec(config);
+    if (match) cacheDirName = match[1];
+  } catch {
+    // No readable app-update.yml — app.getName() is what electron-updater
+    // itself falls back to in that case.
+  }
+
+  return path.join(resolveBaseCachePath(), cacheDirName || app.getName());
+}
+
+async function discardCachedBlockMap() {
+  try {
+    const blockMapFile = path.join(await resolveUpdaterCacheDir(), 'current.blockmap');
+    if (fs.existsSync(blockMapFile)) {
+      fs.rmSync(blockMapFile);
+      writeUpdaterLog('info', `Removed cached ${blockMapFile} so the old block map is fetched for the installed version.`);
+    }
+  } catch (err) {
+    // Never a reason to fail an update: without the removal the worst case is
+    // the behaviour we already had — a differential attempt that may fall back
+    // to a full download.
+    writeUpdaterLog('warn', `Could not remove cached block map: ${err.message}`);
+  }
+}
+
 // onProgress({ downloadedBytes, totalBytes, percent }) — same shape
 // UpdateManager already expects from localTestProvider.download().
-function download(release, onProgress) {
+async function download(release, onProgress) {
+  await discardCachedBlockMap();
+
   return new Promise((resolve, reject) => {
     const onProgressEvent = (progress) => {
       onProgress({

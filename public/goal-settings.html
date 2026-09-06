@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Ziel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
+<link rel="stylesheet" href="/css/goal.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Ziel</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
+    </header>
+
+    <p class="hint">
+      Ein Stream-Ziel, das SYNSA aus den eigenen Alerts zählt — unabhängig von
+      Twitchs Creator Goals, deshalb sind auch Bits und Gift-Subs möglich. Die
+      Zählung startet automatisch neu, sobald der Stream live geht.
+    </p>
+
+    <form id="goal-form" class="card">
+      <div class="card-title">Einstellungen</div>
+
+      <label>
+        Was wird gezählt
+        <select id="goal-metric">
+          <option value="follow">Follower</option>
+          <option value="subscription">Neue Subs</option>
+          <option value="giftsub">Gift-Subs</option>
+          <option value="bits">Bits</option>
+        </select>
+      </label>
+
+      <label>
+        Zielwert
+        <input type="number" id="goal-target" min="1" max="10000000" value="50">
+      </label>
+
+      <label>
+        Anzeigetext
+        <input type="text" id="goal-label" maxlength="60" placeholder="Follower-Ziel">
+      </label>
+
+      <label class="goal-color-label">
+        Akzentfarbe
+        <div class="color-hex-row">
+          <input type="color" id="goal-color" value="#35C9A8">
+          <input type="text" id="goal-color-hex" class="color-hex-input" value="#35C9A8" maxlength="7" spellcheck="false" autocomplete="off">
+        </div>
+      </label>
+
+      <div class="goal-actions">
+        <button type="submit">Ziel speichern</button>
+        <button type="button" id="goal-reset-btn">Zurücksetzen</button>
+      </div>
+    </form>
+
+    <div class="card">
+      <div class="card-title">Aktueller Stand</div>
+      <div class="goal-preview" id="goal-preview">
+        <div class="goal-preview-head">
+          <span class="goal-preview-label" id="goal-preview-label">Follower-Ziel</span>
+          <span class="goal-preview-value" id="goal-preview-value">0 / 50</span>
+        </div>
+        <div class="goal-preview-track"><div class="goal-preview-fill" id="goal-preview-fill"></div></div>
+      </div>
+      <p class="goal-since" id="goal-since"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Overlay-URL</div>
+      <p class="hint" style="margin-bottom: 0;">
+        Als OBS Browser Source:
+        <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay-goal.html">
+          <code class="reveal-copy-value"></code>
+          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/ui.js"></script>
+  <script src="/shared/module-menu.js"></script>
+  <script src="/shared/reveal-copy.js"></script>
+  <script src="/shared/page-socket.js"></script>
+  <script src="/js/goal-settings.js"></script>
+</body>
+</html>

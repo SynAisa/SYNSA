@@ -79,6 +79,9 @@
 
     ws.addEventListener('open', () => {
       retryDelay = 1500;
+      // Same as overlay-music.js: purely so the server knows this Browser
+      // Source exists, for the diagnostics page. No behaviour depends on it.
+      ws.send(JSON.stringify({ kind: 'register', role: 'overlay-countdown' }));
     });
 
     ws.addEventListener('message', (event) => {

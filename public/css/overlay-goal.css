@@ -1,0 +1,94 @@
+:root {
+  /* Pre-mixed by JS from --accent, same reason as overlay-countdown.css:
+     color-mix() needs Chromium 111+ and older OBS builds ship older CEF. */
+  --accent-glow: rgba(53, 201, 168, 0.65);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Anchored top-left rather than centred like the countdown: a goal bar sits
+   in a corner for the whole stream, it isn't the main event. The source can
+   be moved and scaled in OBS from there. */
+#goal-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#goal-root[hidden] {
+  display: none;
+}
+
+#goal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+#goal-label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+  overflow-wrap: anywhere;
+}
+
+#goal-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  text-shadow: 0 0 22px var(--accent-glow), 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+
+#goal-track {
+  height: 12px;
+  border-radius: 999px;
+  /* Dark enough to read on a bright game, without a hard box edge. */
+  background: rgba(11, 17, 18, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(241, 245, 243, 0.12);
+  overflow: hidden;
+}
+
+#goal-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 18px var(--accent-glow);
+  transition: width 420ms ease;
+}
+
+/* Reaching the goal is worth noticing without turning into a light show. */
+#goal-root.is-reached #goal-value {
+  color: var(--accent);
+}
+
+#goal-root.is-reached #goal-fill {
+  animation: goal-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes goal-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}

@@ -196,9 +196,16 @@ async function acceptUpdate() {
 
   const release = state.release;
   console.log(`User accepted update ${release.version}. Starting download.`);
+  // totalBytes stays null until the first real progress event says what is
+  // actually being transferred. release.sizeBytes is the *full* installer size
+  // from the feed, and with differential downloads that is not what gets
+  // fetched — a small update moves a couple of MB, not the whole ~107 MB
+  // installer. Seeding it here made the banner announce "0 MB / 107 MB" before
+  // a single byte had moved, and then correct itself downwards a moment later.
+  // The banner already renders a plain percentage while totalBytes is null.
   setState({
     phase: PHASES.DOWNLOADING,
-    download: { downloadedBytes: 0, totalBytes: release.sizeBytes || null, percent: 0 },
+    download: { downloadedBytes: 0, totalBytes: null, percent: 0 },
     error: null,
   });
 

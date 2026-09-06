@@ -70,8 +70,11 @@
     }));
   }
 
+  // One decimal below 10 MB: a differential download moves a few MB, and
+  // whole megabytes turn that into "1 MB / 1 MB" for the entire transfer.
   function formatMB(bytes) {
-    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
   }
 
   function render(state) {
