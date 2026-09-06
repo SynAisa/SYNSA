@@ -38,6 +38,103 @@ The project provides:
 
 
 
+\## Project Status
+
+
+
+\_Kompakter Stand für zukünftige Aufgaben. Bei jedem Release mitpflegen.\_
+
+
+
+Aktuelle Version: 0.2.1. Öffentlich installierbar, automatische Updates funktionieren gegen echte Releases.
+
+
+
+\### Module
+
+
+
+\- `server.js` — zentraler HTTP-/WS-Server, hält den gesamten `state`, alle REST-Routen. Mit Abstand die größte Datei; neue Features hängen fast immer hier mit drin.
+
+\- `twitch/` — Device-Code-Flow (öffentlicher Client, kein Secret), EventSub, Helix. `twitch/revocation.js` ist eine pure Funktion für die Revocation-Klassifikation.
+
+\- `music/` — YTMDesktop Companion. `spotify/` — als zweite Quelle vorbereitet (PKCE, Auswahl in den Einstellungen), aber ohne registrierte Spotify-Anwendung nicht nutzbar.
+
+\- `update/` — electron-updater-Anbindung. `electron/` — Tray-Hülle.
+
+\- `public/shared/` — Frontend-Module als `window.X`-Globals (`ui.js`, `page-socket.js`, `i18n.js`, `module-menu.js`, `update-banner.js`, `auth-banner.js`, `overlay-panel.js`, `alert-types.js`, `reveal-copy.js`). Neue Seiten diese wiederverwenden, nicht nachbauen.
+
+
+
+\### Overlays
+
+
+
+Vier Overlays: `overlay.html` (Alerts), `overlay-music`, `overlay-countdown`, `overlay-goal`.
+
+
+
+Jedes registriert sich per WS-Nachricht `{kind:'register', role:...}`. Der Server führt daraus `overlayPresence` (verbunden + zuletzt gesehen) — das speist die Diagnoseseite und die Statusanzeige auf den Einstellungsseiten.
+
+
+
+Eingebettete Vorschauen laufen mit `?preview=1`; die Overlay-Skripte überspringen dann das Registrieren, sonst würden sie den angezeigten OBS-Status verfälschen.
+
+
+
+\### Updates
+
+
+
+Differential-Downloads funktionieren nur, weil `update/productionProvider.js` die gecachte `current.blockmap` vor jedem Download löscht. Grund: SYNSA trennt Download und Installation, dadurch beschreiben `installer.exe` und `current.blockmap` sonst unterschiedliche Versionen und electron-updater lädt den vollen Installer. Diese Löschung nicht entfernen.
+
+
+
+`artifactName` ist bewusst versionslos (`SYNSA-Setup.exe`), damit der Latest-Download-Link stabil bleibt.
+
+
+
+\### Zustand auf Platte
+
+
+
+`data/` bleibt lokal: `goal.json`, `window-settings.json`, `music-source.json`, verschlüsselte Tokens. `window-settings.json` wird von `electron/main.js` \*und\* `server.js` geschrieben — deshalb bei jedem Request frisch von Platte lesen, nicht cachen.
+
+
+
+\### Bewusste Auslassungen
+
+
+
+Kein neuer Twitch-Scope und keine `channel.goal.*`-Subscriptions für das Ziel-Overlay — es zählt ausschließlich die eigenen Alerts. Die Diagnoseseite bleibt rein lesend, ohne Steuerelemente.
+
+
+
+\### Sprache und README
+
+
+
+Deutsch ist die Originalsprache und steht im Code; `public/i18n/en.js` bildet Deutsch → Englisch ab. Vor dem Commit auf doppelte Schlüssel prüfen — das ist wiederholt passiert.
+
+
+
+Die README ist auf Deutsch. Der Abschnitt „Aktueller Stand" muss bei jedem Release aktualisiert werden.
+
+
+
+\### Bekannte Falle
+
+
+
+`display: flex` auf einer Klasse schlägt das `[hidden] { display: none }` des Browsers. Bei ausblendbaren Karten braucht es ein explizites `.card[hidden] { display: none; }`.
+
+
+
+
+\---
+
+
+
 \## Development Principles
 
 
