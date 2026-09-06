@@ -15,6 +15,7 @@ window.SynsaTranslationsEn = {
   'Music-Overlay': 'Music overlay',
   Countdown: 'Countdown',
   'Test-Alerts / Control-Panel': 'Test alerts / control panel',
+  'Testbereich (in Überarbeitung)': 'Test area (under revision)',
   Einstellungen: 'Settings',
   'Über SYNSA': 'About SYNSA',
   Module: 'Modules',
@@ -28,6 +29,59 @@ window.SynsaTranslationsEn = {
     'This page is connected to SYNSA and updates live. It says nothing about the Twitch connection.',
   'Diese Seite hat gerade keine Verbindung zu SYNSA und zeigt womöglich veraltete Werte. Sagt nichts über die Twitch-Verbindung aus.':
     'This page currently has no connection to SYNSA and may be showing outdated values. It says nothing about the Twitch connection.',
+  'Die Verbindung zur lokalen SYNSA-App wurde unterbrochen. Neuer Versuch …':
+    'The connection to the local SYNSA app was interrupted. Retrying…',
+  'Nicht verfügbar': 'Unavailable',
+  Systemstatus: 'System status',
+  Latenz: 'Latency',
+  Paketverlust: 'Packet loss',
+  'Breite anpassen — Doppelklick setzt zurück': 'Adjust width — double-click resets',
+  'Standardbreite wiederherstellen': 'Restore default width',
+  'Ich verbinde mich später': 'I’ll connect later',
+  'Mit Twitch anmelden': 'Sign in with Twitch',
+  'Ich habe verstanden': 'I understand',
+  Vorschau: 'Preview',
+  'Netzwerk nicht erreichbar': 'Network unreachable',
+  'Hohe CPU-Auslastung': 'High CPU usage',
+  'Hohe RAM-Auslastung': 'High RAM usage',
+  'Hohe Latenz': 'High latency',
+  'Paketverlust erkannt': 'Packet loss detected',
+  Normal: 'Normal',
+  'Der Testbereich wird gerade überarbeitet.': 'The test area is currently being rebuilt.',
+  'Willkommen bei SYNSA': 'Welcome to SYNSA',
+  'Dein Stream, übersichtlich an einem Ort.': 'Your stream, organized in one place.',
+  'SYNSA bündelt Alerts, Chat und Streaminfos an einem Ort.': 'SYNSA brings alerts, chat and stream information together in one place.',
+  'Das Wichtigste in dieser Version': 'What matters in this version',
+  'Los geht’s': 'Let’s go',
+  'Twitch wurde in deinem normalen Browser geöffnet. Bestätige dort die angezeigten Rechte.': 'Twitch has opened in your regular browser. Confirm the displayed permissions there.',
+  'Verbinde Twitch, um Alerts, Chat und Streaminfos in SYNSA zu nutzen. Du kannst auch erst einmal ohne Verbindung loslegen.':
+    'Connect Twitch to use alerts, chat and stream information in SYNSA. You can also get started without connecting.',
+  'Twitch-Verbindung': 'Twitch connection',
+  'Diese Rechte benötigt SYNSA': 'SYNSA needs these permissions',
+  'Twitch zeigt dir diese Berechtigungen gleich noch einmal. SYNSA verwendet sie nur für diese Funktionen:':
+    'Twitch will show these permissions again shortly. SYNSA uses them only for these functions:',
+  Alerts: 'Alerts',
+  'Neue Follower, Abos, Geschenk-Abos und Bits erkennen.': 'Detect new followers, subscriptions, gift subscriptions and bits.',
+  Chat: 'Chat',
+  'Chat anzeigen, Nachrichten senden und Emotes bereitstellen.': 'Show chat, send messages and provide emotes.',
+  Moderation: 'Moderation',
+  'Timeouts und Bans aus dem Dashboard ausführen.': 'Run timeouts and bans from the dashboard.',
+  Streaminfos: 'Stream information',
+  'Titel und Kategorie deines Streams ändern.': 'Change your stream title and category.',
+  'Deine Zugangsdaten bleiben verschlüsselt auf diesem PC. Du kannst die Verbindung später in den Einstellungen trennen.':
+    'Your credentials stay encrypted on this PC. You can disconnect later in Settings.',
+  'Bestätige die Anmeldung bei Twitch': 'Confirm the sign-in on Twitch',
+  'Twitch wurde in deinem normalen Browser geöffnet. Vergleiche dort den folgenden Code und bestätige die angezeigten Rechte.':
+    'Twitch has opened in your usual browser. Compare the code below there and confirm the displayed permissions.',
+  Abgleichcode: 'Verification code',
+  'Öffne Twitch, trage den Code ein und bestätige die angezeigten Rechte.': 'Open Twitch, enter the code and confirm the displayed permissions.',
+  'Twitch ist gerade nicht erreichbar. Bitte versuche es später erneut.': 'Twitch is currently unavailable. Please try again later.',
+  '{n} Monate abonniert': 'Subscribed for {n} months',
+  'Folgt seit': 'Following since',
+  'Folgt nicht': 'Not following',
+  'Testbereich in Überarbeitung': 'Test area under revision',
+  'Test-Alerts und die Lautstärkesteuerung sind vorübergehend deaktiviert. Reale Twitch-Alerts laufen unverändert weiter.':
+    'Test alerts and volume controls are temporarily disabled. Real Twitch alerts continue as usual.',
 
   'Wichtiges Update': 'Important update',
   'SYNSA {v} verfügbar': 'SYNSA {v} available',
@@ -275,6 +329,15 @@ window.SynsaTranslationsEn = {
   'Willkommen zu SYNSA, deinem Twitch-Terminal.': 'Welcome to SYNSA, your Twitch terminal.',
   'Dieser kurze Rundgang zeigt dir in drei Schritten, wofür die Bereiche des Dashboards da sind.':
     'This short tour walks you through the three parts of the dashboard and what each is for.',
+  'Kurzer Dashboard-Rundgang': 'Quick dashboard tour',
+  'In den nächsten Schritten lernst du die wichtigsten Bereiche des Dashboards kennen.':
+    'The next steps introduce you to the most important dashboard areas.',
+  'Du kannst den Rundgang jederzeit mit dem X oben rechts schließen.':
+    'You can close the tour at any time with the X in the upper-right corner.',
+  'Hier siehst du auf einen Blick die Auslastung deines PCs und deiner Verbindung.':
+    'See your computer and connection usage at a glance here.',
+  'Bei einer Warnung öffnet sich der Bereich automatisch. So erkennst du Probleme vor dem Stream rechtzeitig.':
+    'The area opens automatically when there is a warning, so you can spot problems before your stream in time.',
 
   'Hier kannst du die Kategorie und den Titel deines Streams festlegen. Änderungen werden direkt auf Twitch übernommen. Dafür muss dein Twitch-Konto mit SYNSA verknüpft sein.':
     'Here you set your stream’s title and category. Changes are applied on Twitch straight away. Your Twitch account has to be linked to SYNSA for that.',

@@ -1,6 +1,6 @@
 {
   "name": "synsa",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "SYNSA — local Twitch stream toolkit: alert overlays, chat dashboard, now-playing and countdown modules for OBS.",
   "license": "UNLICENSED",
   "repository": {
@@ -37,6 +37,7 @@
       "music/**/*",
       "spotify/**/*",
       "update/**/*",
+      "system/**/*",
       "public/**/*",
       "package.json",
       "!node_modules/electron/**"

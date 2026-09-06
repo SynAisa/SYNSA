@@ -12,6 +12,8 @@
 <link rel="stylesheet" href="/css/nav.css">
 <link rel="stylesheet" href="/css/update.css">
 <link rel="stylesheet" href="/css/tour.css">
+<link rel="stylesheet" href="/css/login-modal.css">
+<link rel="stylesheet" href="/css/changelog.css">
 </head>
 <body>
   <div class="page">
@@ -21,7 +23,17 @@
         <h1>Dashboard</h1>
       </div>
       <div class="header-right">
-        <div id="status" class="status">Verbinde…</div>
+        <section class="system-status" id="system-status">
+          <span class="system-status-title">Systemstatus</span>
+          <div class="system-status-metrics" aria-label="Systemstatus">
+            <button type="button" class="system-status-metric" data-metric="cpuPercent" title="CPU ausblenden"><span class="system-status-metric-content"><span>CPU</span><strong id="system-cpu">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+            <button type="button" class="system-status-metric" data-metric="memoryPercent" title="RAM ausblenden"><span class="system-status-metric-content"><span>RAM</span><strong id="system-memory">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+            <button type="button" class="system-status-metric" data-metric="downloadBytesPerSecond" title="Download ausblenden"><span class="system-status-metric-content"><span>↓</span><strong id="system-download">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+            <button type="button" class="system-status-metric" data-metric="uploadBytesPerSecond" title="Upload ausblenden"><span class="system-status-metric-content"><span>↑</span><strong id="system-upload">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+            <button type="button" class="system-status-metric" data-metric="latencyMs" title="Latenz ausblenden"><span class="system-status-metric-content"><span>Ping</span><strong id="system-latency">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+            <button type="button" class="system-status-metric" data-metric="packetLossPercent" title="Paketverlust ausblenden"><span class="system-status-metric-content"><span>Verlust</span><strong id="system-packet-loss">–</strong></span><span class="system-status-eye" aria-hidden="true">◉</span></button>
+          </div>
+        </section>
       </div>
     </header>
 
@@ -89,12 +101,6 @@
         </form>
       </section>
 
-      <!-- Drag handle between the two columns. Sits between them in the DOM
-           as well as visually (see the order values in dashboard.css), so
-           keyboard focus reaches it in the place it appears. -->
-      <div class="columns-splitter" id="columns-splitter" role="separator" aria-orientation="vertical"
-           tabindex="0" title="Breite anpassen — Doppelklick setzt zurück"></div>
-
       <section class="panel history-panel">
         <div class="panel-title">Alert Box</div>
         <div class="history-filters">
@@ -117,10 +123,12 @@
   <script src="/shared/update-banner.js"></script>
   <script src="/shared/auth-banner.js"></script>
   <script src="/shared/page-socket.js"></script>
+  <script src="/shared/changelog.js"></script>
+  <script src="/js/dashboard/login-modal.js"></script>
+  <script src="/js/dashboard/system-monitor.js"></script>
   <script src="/js/dashboard/chatters.js"></script>
   <script src="/js/dashboard/stream.js"></script>
   <script src="/js/dashboard.js"></script>
-  <script src="/js/dashboard/layout.js"></script>
   <script src="/js/dashboard/tour.js"></script>
 </body>
 </html>

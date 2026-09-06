@@ -59,6 +59,12 @@
   padding: 2px 7px;
 }
 
+.changelog-entry-preview {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 .changelog-entry-date {
   font-size: 12px;
   color: var(--text-muted);

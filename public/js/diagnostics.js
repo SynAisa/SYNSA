@@ -6,7 +6,7 @@
 // Source appearing or disappearing as OBS switches scenes) is not broadcast,
 // and adding a broadcast for it would put load on every page for something
 // only this one cares about. The page socket is still used, for the standard
-// "SYNSA verbunden" header line every page has.
+// shared local-connection warning used by ordinary pages.
 (function () {
   const REFRESH_MS = 5000;
 
@@ -212,7 +212,7 @@
   load();
   setInterval(load, REFRESH_MS);
 
-  // Only for the header's "SYNSA verbunden" line — this page reads its data
-  // over HTTP and acts on no messages.
+  // Keeps the shared local-connection warning active if the server goes away;
+  // this page reads its actual diagnostics data over HTTP.
   window.connectPageSocket(() => {});
 })();

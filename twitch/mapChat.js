@@ -8,7 +8,7 @@ function mapChatMessage(event) {
     userId: event.chatter_user_id,
     username: event.chatter_user_name,
     color: event.color || null,
-    badges: (event.badges || []).map((b) => b.set_id),
+    badges: (event.badges || []).map((b) => ({ setId: b.set_id, id: b.id, info: b.info || '' })),
     fragments: (event.message.fragments || []).map((f) => ({
       type: f.type,
       text: f.text,

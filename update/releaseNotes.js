@@ -22,7 +22,7 @@ function toLines(releaseNotes, { limit = 20 } = {}) {
   return raw
     .replace(/<[^>]+>/g, '') // strip any embedded HTML from the release body
     .split(/\r?\n/)
-    .map((line) => line.replace(/^[-*]\s*/, '').trim())
+    .map((line) => line.replace(/^#{1,6}\s+|^[-*]\s*/, '').trim())
     .filter(Boolean)
     .slice(0, limit);
 }

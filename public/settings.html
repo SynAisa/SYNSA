@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="/css/control.css">
 <link rel="stylesheet" href="/css/nav.css">
 <link rel="stylesheet" href="/css/update.css">
+<link rel="stylesheet" href="/css/login-modal.css">
+<link rel="stylesheet" href="/css/changelog.css">
 </head>
 <body>
   <div class="page">
@@ -19,7 +21,6 @@
         <div id="module-menu-root"></div>
         <h1>Einstellungen</h1>
       </div>
-      <div id="status" class="status">Verbinde…</div>
     </header>
 
     <div id="update-banner" hidden></div>
@@ -31,7 +32,7 @@
       <div class="card-title">Twitch</div>
       <div class="twitch-row">
         <span id="twitch-status" class="twitch-status">Nicht verbunden</span>
-        <a id="twitch-connect" class="twitch-connect" href="/setup.html">Mit Twitch verbinden</a>
+        <a id="twitch-connect" class="twitch-connect" href="/settings.html?login=1&amp;step=permissions">Mit Twitch verbinden</a>
         <form id="twitch-disconnect-form" action="/auth/twitch/logout" method="post" hidden>
           <button type="submit" class="twitch-disconnect">Trennen</button>
         </form>
@@ -99,6 +100,8 @@
   <script src="/shared/ui.js"></script>
   <script src="/shared/module-menu.js"></script>
   <script src="/shared/page-socket.js"></script>
+  <script src="/shared/changelog.js"></script>
+  <script src="/js/dashboard/login-modal.js"></script>
   <script src="/shared/update-banner.js"></script>
   <script src="/shared/auth-banner.js"></script>
   <script src="/shared/reveal-copy.js"></script>

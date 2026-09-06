@@ -20,3 +20,47 @@
   --border: rgba(53, 201, 168, 0.25);
   --text-muted: rgba(241, 245, 243, 0.58);
 }
+
+/* A quiet, consistent scrollbar across dashboard, settings and overlays.
+   The dark track keeps the browser chrome out of the way while the mint thumb
+   stays easy to spot whenever content can be scrolled. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(53, 201, 168, 0.58) rgba(11, 17, 18, 0.72);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(11, 17, 18, 0.72);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 30px;
+  border: 2px solid rgba(11, 17, 18, 0.72);
+  border-radius: 8px;
+  background: rgba(53, 201, 168, 0.58);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--highlight);
+}
+
+.local-connection-warning {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(224, 122, 122, 0.55);
+  border-radius: 8px;
+  background: rgba(224, 122, 122, 0.1);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.local-connection-warning[hidden] {
+  display: none;
+}

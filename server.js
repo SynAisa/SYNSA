@@ -22,8 +22,13 @@ const update = require('./update/manager');
 const welcomeState = require('./update/welcomeState');
 const releaseNotes = require('./update/releaseNotes');
 const updateRepository = require('./update/repository');
+const { createMonitor } = require('./system/monitor');
 
 const PORT = process.env.PORT || 4242;
+// The former test area is intentionally offline while it is rebuilt. This is
+// enforced here as well as in its UI, so a stale page cannot inject simulated
+// alerts, chat messages or stream state into a real session.
+const CONTROL_PANEL_ENABLED = false;
 
 // "localhost" resolves to ::1 on Windows before 127.0.0.1, so binding to
 // just one loopback address silently breaks half the clients (OBS included).
@@ -62,6 +67,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Legacy bookmarks must never reopen the old full-page onboarding. The
+// dashboard owns first-run login now and its query flag explicitly opens the
+// modal for someone who chose to link Twitch later.
+app.get('/setup.html', (req, res) => res.redirect('/dashboard.html?login=1'));
+app.get('/welcome.html', (req, res) => res.redirect('/dashboard.html'));
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // One WebSocket hub shared by both loopback listeners.
@@ -93,7 +104,7 @@ const state = {
   // { reason, since } once Twitch has rejected this authorization for good —
   // see twitch/eventsub.js markAuthRevoked(). It is what tells "not connected
   // right now" apart from "needs to be linked again".
-  twitch: { connected: false, channel: null, reauthRequired: null },
+  twitch: { connected: false, channel: null, reauthRequired: null, chatBadges: {} },
   stream: { live: false, startedAt: null },
   emotes: {},
   music: { connected: false, title: null, artist: null, thumbnail: null, durationSeconds: 0, progressSeconds: 0, isPlaying: false },
@@ -127,7 +138,16 @@ const state = {
   // Populated below once update.init() runs; present here mainly so its
   // shape is visible next to the rest of state at a glance.
   update: null,
+  system: null,
 };
+
+const systemMonitor = createMonitor({
+  onStatus(status) {
+    state.system = status;
+    broadcast({ kind: 'system-status', status });
+  },
+});
+state.system = systemMonitor.getStatus();
 
 // The event history (follows/subs/cheers/raids) is persisted to disk so it
 // survives a server restart — the dashboard is meant to show everything
@@ -311,6 +331,13 @@ wss.on('connection', (ws) => {
       unacknowledgedAlerts.delete(msg.id);
     }
 
+    if (!CONTROL_PANEL_ENABLED && typeof msg.kind === 'string' && msg.kind.startsWith('trigger-')) {
+      if (ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({ kind: 'control-panel-disabled', message: 'Der Testbereich wird gerade überarbeitet.' }));
+      }
+      return;
+    }
+
     // A control-panel client asks to fan an alert out to everyone
     // (the overlay included). Real Twitch EventSub events reach the same
     // recordAlert() function further down, via eventsub.init().
@@ -399,7 +426,10 @@ wss.on('connection', (ws) => {
           typeof msg.username === 'string' && msg.username.trim() ? msg.username.trim().slice(0, 60) : msg.userId;
         helix
           .banUser(broadcasterId, broadcasterId, { userId: msg.userId, duration: msg.duration })
-          .then(() => recordModerationNotice(username, msg.duration))
+          .then(() => {
+            removeChatMessagesForUser(msg.userId);
+            recordModerationNotice(username, msg.duration);
+          })
           .catch((err) => {
             console.error('Moderation action failed:', err.message);
             if (ws.readyState === ws.OPEN) {
@@ -518,6 +548,13 @@ function recordChatMessage(message) {
   broadcast({ kind: 'chat-message', message });
 }
 
+function removeChatMessagesForUser(userId) {
+  for (let i = chatHistory.length - 1; i >= 0; i -= 1) {
+    if (chatHistory[i].userId === userId) chatHistory.splice(i, 1);
+  }
+  broadcast({ kind: 'chat-remove-user', userId });
+}
+
 // Seconds into the wording the moderation menu itself uses, so the line in
 // the chat log reads like the button that produced it.
 function formatTimeoutDuration(seconds) {
@@ -577,9 +614,9 @@ eventsub.init({
     // too meant every state snapshot and every status broadcast carried
     // the whole thing twice.
     const { emotes, ...twitchStatus } = status;
-    state.twitch = twitchStatus;
+    state.twitch = { ...twitchStatus, chatBadges: state.twitch.chatBadges || {} };
     if (emotes) state.emotes = emotes;
-    broadcast({ kind: 'twitch-status', status: twitchStatus });
+    broadcast({ kind: 'twitch-status', status: state.twitch });
     broadcast({ kind: 'emotes', map: state.emotes });
 
     // Warms the emote-picker cache the moment Twitch connects, instead of
@@ -587,6 +624,10 @@ eventsub.init({
     // round-trip right then. Fire-and-forget: a failure here just means the
     // next actual /api/twitch/emotes request falls back to fetching it live.
     if (twitchStatus.connected && twitchStatus.broadcasterId) {
+      helix.getChatBadges(twitchStatus.broadcasterId).then((chatBadges) => {
+        state.twitch = { ...state.twitch, chatBadges };
+        broadcast({ kind: 'twitch-status', status: state.twitch });
+      }).catch((err) => console.error('Could not load Twitch chat badges:', err.message));
       getEmotePayload(twitchStatus.broadcasterId).catch((err) => {
         console.error('Emote cache warm-up failed:', err.message);
       });
@@ -776,15 +817,19 @@ app.post('/api/update/install', (req, res) => {
   res.json({ ok: true });
 });
 
-// --- Welcome screen (first start, and again after every update) ------------
+// --- Welcome screen (fresh installation only) ------------------------------
 
-// Marks the running version as "the user has seen the welcome screen for
-// this one", which is what stops it reappearing on every ordinary start.
+// Marks first-run setup as complete. This is deliberately version-independent
+// so an update cannot reopen setup just because the version changed.
 // Written here rather than in the page so the format stays in one module
 // (update/welcomeState.js), shared with electron/main.js which reads it.
 app.post('/api/welcome/seen', (req, res) => {
   const version = require('./package.json').version;
-  res.json({ ok: welcomeState.setWelcomedVersion(version), version });
+  res.json({ ok: welcomeState.markWelcomeCompleted(), version });
+});
+
+app.get('/api/system/status', (req, res) => {
+  res.json(systemMonitor.getStatus());
 });
 
 // --- Interface state that has to outlive an update -------------------------
@@ -800,8 +845,14 @@ app.post('/api/welcome/seen', (req, res) => {
 // TOUR_VERSION is the deliberate act of saying "the dashboard changed enough
 // to be worth showing again". An ordinary release does not touch it, which is
 // exactly the difference the tour was missing.
-const TOUR_VERSION = 1;
+const TOUR_VERSION = 3;
 const UI_STATE_FILE = path.join(DATA_DIR, 'ui-state.json');
+const SYSTEM_METRIC_KEYS = new Set(['cpuPercent', 'memoryPercent', 'downloadBytesPerSecond', 'uploadBytesPerSecond', 'latencyMs', 'packetLossPercent']);
+
+function normalizeHiddenSystemMetrics(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((metric) => typeof metric === 'string' && SYSTEM_METRIC_KEYS.has(metric)))];
+}
 
 // How much of the dashboard row the left column takes, as a fraction. Bounded
 // here as well as in the page: a value out of range (an edited file, an older
@@ -824,9 +875,11 @@ function loadUiState() {
       tourSeenVersion: Number(saved.tourSeenVersion) || 0,
       language: saved.language === 'en' || saved.language === 'de' ? saved.language : null,
       layoutColumns: clampLayoutColumns(saved.layoutColumns),
+      loginDismissed: saved.loginDismissed === true,
+      hiddenSystemMetrics: normalizeHiddenSystemMetrics(saved.hiddenSystemMetrics),
     };
   } catch {
-    return { tourSeenVersion: 0, language: null, layoutColumns: null };
+    return { tourSeenVersion: 0, language: null, layoutColumns: null, loginDismissed: false, hiddenSystemMetrics: [] };
   }
 }
 
@@ -856,6 +909,8 @@ app.post('/api/ui-state', (req, res) => {
   // that is stored alone rather than silently resetting the dashboard.
   const layoutColumns = clampLayoutColumns(req.body.layoutColumns);
   if (layoutColumns !== null) patch.layoutColumns = layoutColumns;
+  if (req.body.loginDismissed === true || req.body.loginDismissed === false) patch.loginDismissed = req.body.loginDismissed;
+  if (Array.isArray(req.body.hiddenSystemMetrics)) patch.hiddenSystemMetrics = normalizeHiddenSystemMetrics(req.body.hiddenSystemMetrics);
   res.json({ ...saveUiState(patch), tourVersion: TOUR_VERSION });
 });
 
@@ -870,10 +925,34 @@ const CHANGELOG_TIMEOUT_MS = 8000;
 const CHANGELOG_LIMIT = 10;
 let changelogCache = { fetchedAt: 0, entries: null };
 
+// A release is written on GitHub only when it is actually published. Keeping
+// the current development notes here lets the bundled app show a useful,
+// non-technical preview before that moment; once GitHub has the release, its
+// published body remains the source of truth.
+const DEVELOPMENT_CHANGELOG = {
+  '0.2.3': [
+    'Start nach einem Update läuft ruhiger: Einrichtung erscheint nur noch bei einer frischen Installation.',
+    'Der neue Systemstatus zeigt CPU, Arbeitsspeicher und Netzwerkwerte direkt im Dashboard.',
+    'Die lokale Verbindung läuft im Hintergrund; ein Hinweis erscheint nur noch bei einer Störung.',
+    'Der Testbereich wird überarbeitet und ist deshalb vorübergehend deaktiviert.',
+    'Chat und Alert Box lassen sich einfacher in der Breite anpassen und zurücksetzen.',
+  ],
+};
+
+function changelogForCurrentBuild(entries) {
+  const version = require('./package.json').version;
+  if (entries.some((entry) => entry.version === version) || !DEVELOPMENT_CHANGELOG[version]) return entries;
+  return [{ version, publishedAt: null, notes: DEVELOPMENT_CHANGELOG[version], preview: true }, ...entries];
+}
+
+function sendChangelog(res, entries, extra = {}) {
+  res.json({ entries: changelogForCurrentBuild(entries), currentVersion: require('./package.json').version, ...extra });
+}
+
 app.get('/api/changelog', async (req, res) => {
   const now = Date.now();
   if (changelogCache.entries && now - changelogCache.fetchedAt < CHANGELOG_CACHE_MS) {
-    res.json({ entries: changelogCache.entries, currentVersion: require('./package.json').version });
+    sendChangelog(res, changelogCache.entries);
     return;
   }
 
@@ -904,13 +983,13 @@ app.get('/api/changelog', async (req, res) => {
       .filter((entry) => entry.version);
 
     changelogCache = { fetchedAt: now, entries };
-    res.json({ entries, currentVersion: require('./package.json').version });
+    sendChangelog(res, entries);
   } catch (err) {
     // No changelog is not an error worth blocking the welcome screen over —
     // the page hides the box and lets the user continue (offline first start,
     // GitHub unreachable, rate limit).
     console.error('Changelog konnte nicht geladen werden:', err.message);
-    res.json({ entries: [], unavailable: true, currentVersion: require('./package.json').version });
+    sendChangelog(res, [], { unavailable: true });
   }
 });
 
@@ -947,11 +1026,9 @@ app.post('/api/twitch/device/cancel', (req, res) => {
   res.json(deviceAuth.cancel());
 });
 
-// Anything still pointing at the old login route (a bookmark, an older page
-// kept open) lands on the setup screen, which is where linking an account
-// happens now.
+// Older links and a reauthentication banner open the dashboard's login modal.
 app.get('/auth/twitch/login', (req, res) => {
-  res.redirect('/setup.html');
+  res.redirect('/dashboard.html?login=1');
 });
 
 app.post('/auth/twitch/logout', (req, res) => {
@@ -960,11 +1037,31 @@ app.post('/auth/twitch/logout', (req, res) => {
   deviceAuth.cancel();
   eventsub.stop();
   tokenStore.clear();
-  res.redirect('/control.html');
+  // Disconnecting is a settings action. Keeping the user on Settings avoids
+  // the old jump into the (currently paused) control/test area.
+  res.redirect('/settings.html');
 });
 
 app.get('/api/twitch/status', (req, res) => {
   res.json(state.twitch);
+});
+
+const CHAT_PROFILE_CACHE_MS = 10 * 60 * 1000;
+const chatProfileCache = new Map();
+app.get('/api/twitch/chat-profile/:userId', async (req, res) => {
+  const broadcasterId = eventsub.getBroadcasterId();
+  const userId = String(req.params.userId || '');
+  if (!broadcasterId || !/^[0-9]+$/.test(userId)) return res.status(409).json({ error: 'Nicht mit Twitch verbunden' });
+  const cached = chatProfileCache.get(userId);
+  if (cached && Date.now() - cached.fetchedAt < CHAT_PROFILE_CACHE_MS) return res.json(cached.value);
+  try {
+    const follower = await helix.getFollower(broadcasterId, userId);
+    const value = { followedAt: follower ? follower.followed_at : null };
+    chatProfileCache.set(userId, { fetchedAt: Date.now(), value });
+    res.json(value);
+  } catch (err) {
+    res.status(502).json({ error: 'Profil konnte nicht geladen werden' });
+  }
 });
 
 // --- Stream info (title / category) ---------------------------------------
@@ -1616,6 +1713,8 @@ const ready = (async () => {
   } catch (err) {
     console.error('Could not start the music source on boot:', err.message);
   }
+
+  systemMonitor.start();
 })();
 
 module.exports = { ready, port: PORT };

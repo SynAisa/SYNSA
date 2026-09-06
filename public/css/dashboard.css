@@ -63,6 +63,160 @@ h1 {
   gap: 16px;
 }
 
+.system-status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.system-status-title {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.system-status-metrics {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.system-status-metric {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: width 140ms ease, border-color 140ms ease, background 140ms ease, opacity 140ms ease;
+}
+
+/* Fixed tracks keep the readout calm: a value such as 100 MB/s must never
+   push CPU, RAM or Ping sideways while the stream is running. */
+.system-status-metric[data-metric="cpuPercent"],
+.system-status-metric[data-metric="memoryPercent"] { width: 58px; }
+.system-status-metric[data-metric="downloadBytesPerSecond"] { width: 94px; }
+.system-status-metric[data-metric="uploadBytesPerSecond"] { width: 88px; }
+.system-status-metric[data-metric="latencyMs"] { width: 68px; }
+.system-status-metric[data-metric="packetLossPercent"] { width: 72px; }
+
+.system-status-metric:hover,
+.system-status-metric:focus-visible {
+  border-color: var(--border);
+  background: rgba(53, 201, 168, 0.07);
+  outline: none;
+}
+
+.system-status-metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.system-status-metric-content > span {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.system-status-metric-content strong {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.system-status-eye {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.system-status-eye::after {
+  content: '';
+  position: absolute;
+  width: 21px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0;
+  transform: rotate(-42deg);
+}
+
+.system-status-metric:hover .system-status-eye,
+.system-status-metric:focus-visible .system-status-eye {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Hovering a visible value previews the crossed-out eye: a click hides it.
+   A hidden value keeps the normal eye, signalling that a click restores it. */
+.system-status-metric:not(.is-hidden):hover .system-status-eye::after,
+.system-status-metric:not(.is-hidden):focus-visible .system-status-eye::after {
+  opacity: 1;
+}
+
+.system-status-metric:hover .system-status-metric-content,
+.system-status-metric:focus-visible .system-status-metric-content {
+  opacity: 0.22;
+}
+
+.system-status-metric.is-hidden {
+  width: 30px;
+  padding: 5px;
+  opacity: 0.72;
+}
+
+.system-status-metric.is-hidden .system-status-metric-content {
+  display: none;
+}
+
+.system-status-metric.is-hidden .system-status-eye {
+  opacity: 1;
+  color: var(--text-muted);
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.system-status-metric.is-warning .system-status-metric-content strong {
+  color: var(--type-cheer);
+}
+
+.system-status-metric.is-critical .system-status-metric-content strong {
+  color: #e07a7a;
+}
+
+.system-status.is-warning .system-status-title { color: var(--type-cheer); }
+.system-status.is-critical .system-status-title { color: #e07a7a; }
+
+@media (max-width: 850px) {
+  .page-header { flex-wrap: wrap; gap: 10px; }
+  .header-right { width: 100%; margin-left: 0; }
+  .system-status { justify-content: flex-start; flex-wrap: wrap; }
+  .system-status-metrics { flex-wrap: wrap; }
+}
+
 .status {
   font-size: 12px;
   font-weight: 600;
@@ -285,17 +439,13 @@ h1 {
   object-fit: cover;
 }
 
-/* Three tracks, not two: the middle one is the drag handle between Alert Box
-   and Chat. The two outer widths are variables so the handle can change them
-   at runtime (see dashboard/layout.js) without this file knowing anything
-   about dragging — the defaults here stay the layout everyone starts with. */
+/* The two primary dashboard areas deliberately remain stable. Their clear
+   gap is easier to scan than an always-visible resize control. */
 .columns {
   flex: 1;
   display: grid;
-  /* The middle track is exactly the gap the two panels had before, so the
-     handle costs no space: it lives in the space that was already there. */
-  grid-template-columns: var(--col-left, 1fr) 16px var(--col-right, 1.4fr);
-  gap: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
   min-height: 0;
 }
 
@@ -303,65 +453,14 @@ h1 {
   order: 1;
 }
 
-.columns-splitter {
-  order: 2;
-}
-
 .chat-panel {
-  order: 3;
-}
-
-/* Deliberately narrow to look at and wide to hit: the visible line is the
-   1px rule in ::before, the element around it is the grab area. */
-.columns-splitter {
-  align-self: stretch;
-  position: relative;
-  cursor: col-resize;
-  border-radius: 4px;
-  touch-action: none;
-}
-
-.columns-splitter::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: 50%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: var(--border);
-  transition: background 0.15s ease, width 0.15s ease;
-}
-
-.columns-splitter:hover::before,
-.columns-splitter.is-dragging::before,
-.columns-splitter:focus-visible::before {
-  background: var(--accent);
-  width: 2px;
-}
-
-.columns-splitter:focus-visible {
-  outline: none;
-}
-
-/* While dragging, the pointer leaves the handle constantly — without this the
-   cursor flickers back to a text caret over the panels it passes. */
-body.is-resizing-columns,
-body.is-resizing-columns * {
-  cursor: col-resize !important;
-  user-select: none;
+  order: 2;
 }
 
 @media (max-width: 800px) {
   .columns {
-    /* One column below this width, so there is nothing left to split — the
-       gap has to come back as a real gap here. */
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .columns-splitter {
-    display: none;
   }
 }
 
@@ -569,12 +668,20 @@ body.is-resizing-columns * {
    positioned overlay) and fades out well before the right edge instead of
    stopping at a hard rectangle. */
 .chat-message--new {
-  animation: chat-message-highlight 5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: chat-message-highlight 850ms ease-out forwards;
 }
 
 @keyframes chat-message-highlight {
-  0%, 100% { box-shadow: inset 60px 0 30px -20px rgba(53, 201, 168, 0); }
-  10%, 60% { box-shadow: inset 60px 0 30px -20px rgba(53, 201, 168, 0.3); }
+  0% { background: rgba(53, 201, 168, 0.16); }
+  100% { background: transparent; }
+}
+
+.chat-badge-image {
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 .badge {
@@ -628,7 +735,28 @@ body.is-resizing-columns * {
 
 .chat-username {
   font-weight: 700;
+  cursor: pointer;
 }
+
+.chat-profile-popover {
+  position: fixed;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 250px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #14201c;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.chat-profile-popover > span { color: var(--text-muted); }
+.chat-profile-actions { display: flex; gap: 5px; }
+.chat-profile-actions button { border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--text); cursor: pointer; padding: 4px 6px; font-size: 11px; }
 
 .chat-colon {
   color: var(--text-muted);
@@ -887,41 +1015,6 @@ body.is-resizing-columns * {
 
 .chat-form button:hover {
   background: var(--highlight);
-}
-
-/* Scrollbar for Chat + Verlauf: invisible until you're actually over the
-   panel, styled to match the theme instead of the OS default. Electron's
-   Chromium now also understands the standard scrollbar-color property —
-   setting it here would take over from the ::-webkit-scrollbar-thumb
-   rules below and there's no hover variant for it, so the bar would stay
-   permanently invisible instead of only-hidden-until-hover. Only the
-   -webkit- pseudo-elements support that per-state styling.
-*/
-.chat-messages::-webkit-scrollbar,
-.history-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-messages::-webkit-scrollbar-track,
-.history-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-messages::-webkit-scrollbar-thumb,
-.history-list::-webkit-scrollbar-thumb {
-  background-color: transparent;
-  border-radius: 4px;
-  transition: background-color 150ms ease;
-}
-
-.chat-messages:hover::-webkit-scrollbar-thumb,
-.history-list:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(53, 201, 168, 0.35);
-}
-
-.chat-messages::-webkit-scrollbar-thumb:hover,
-.history-list::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(53, 201, 168, 0.6);
 }
 
 /* --- History ---------------------------------------------------------- */

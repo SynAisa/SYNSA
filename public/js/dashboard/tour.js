@@ -1,4 +1,4 @@
-// Guided tour of the dashboard: three stops that explain what the panels are
+// Guided tour of the dashboard: compact stops that explain what the panels are
 // for, not which button does what.
 //
 // It highlights the real panels rather than pictures of them — a full-screen
@@ -30,17 +30,21 @@
   let tourVersion = 1;
 
   const STEPS = [
-    // Opens the tour without highlighting anything: right after the setup this
-    // is the first thing a new user sees, so it says what SYNSA is before it
-    // starts pointing at panels. It carries no step counter — the tour still
-    // has three stops, this is the greeting in front of them.
     {
       intro: true,
       selector: null,
-      title: 'Willkommen zu SYNSA',
+      title: 'Kurzer Dashboard-Rundgang',
       paragraphs: [
-        'Willkommen zu SYNSA, deinem Twitch-Terminal.',
-        'Dieser kurze Rundgang zeigt dir in drei Schritten, wofür die Bereiche des Dashboards da sind.',
+        'In den nächsten Schritten lernst du die wichtigsten Bereiche des Dashboards kennen.',
+        'Du kannst den Rundgang jederzeit mit dem X oben rechts schließen.',
+      ],
+    },
+    {
+      selector: '#system-status',
+      title: 'Systemstatus',
+      paragraphs: [
+        'Hier siehst du auf einen Blick die Auslastung deines PCs und deiner Verbindung.',
+        'Bei einer Warnung öffnet sich der Bereich automatisch. So erkennst du Probleme vor dem Stream rechtzeitig.',
       ],
     },
     {
@@ -224,7 +228,6 @@
     const target = step.selector ? document.querySelector(step.selector) : null;
     // A panel the dashboard doesn't have is not worth stopping the tour over —
     // skip ahead instead of leaving the user in a dimmed room with nothing lit.
-    // The greeting has no selector at all and is not affected by this.
     if (step.selector && !target) {
       if (index > currentIndex) show(index + 1);
       else show(index - 1);
@@ -248,11 +251,9 @@
       textEl.appendChild(p);
     });
 
-    // Counted over the three stops only, so the greeting in front of them
-    // doesn't turn the tour into "1 / 4". Digits and a slash read the same in
-    // both languages.
-    const stops = STEPS.filter((s) => !s.intro).length;
-    progressEl.textContent = step.intro ? '' : `${index} / ${stops}`;
+    const stops = STEPS.filter((candidate) => !candidate.intro).length;
+    const completedIntro = STEPS.slice(0, index + 1).filter((candidate) => !candidate.intro).length;
+    progressEl.textContent = step.intro ? '' : `${completedIntro} / ${stops}`;
 
     const isFirst = index === 0;
     const isLast = index === STEPS.length - 1;
@@ -269,7 +270,6 @@
   function onResize() {
     const step = STEPS[currentIndex];
     if (!step) return;
-    // Passing null re-centres the greeting, which has no panel to sit next to.
     positionCard(step.selector ? document.querySelector(step.selector) : null);
   }
 
@@ -310,8 +310,22 @@
     else window.addEventListener('load', start, { once: true });
   }
 
+  // On a new installation the login modal deliberately gets the first focus.
+  // Wait until its user has connected or explicitly deferred it before the
+  // tour starts, so the tour is actually visible rather than running beneath
+  // another modal.
+  function startAfterLoginModal() {
+    const loginReady = window.SynsaLoginModalReady;
+    // Let the login modal finish its removal before creating the next dialog.
+    // This prevents a one-frame overlap on slower Windows/Electron starts.
+    if (loginReady && typeof loginReady.then === 'function') {
+      loginReady.then(() => window.setTimeout(startWhenReady, 180));
+    }
+    else startWhenReady();
+  }
+
   if (requested) {
-    startWhenReady();
+    startAfterLoginModal();
   } else {
     fetch('/api/ui-state')
       .then((res) => (res.ok ? res.json() : null))
@@ -330,7 +344,7 @@
           return;
         }
 
-        startWhenReady();
+        startAfterLoginModal();
       })
       .catch(() => {
         // Same reasoning as above — stay quiet.

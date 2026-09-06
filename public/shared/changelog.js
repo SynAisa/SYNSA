@@ -64,6 +64,13 @@
         head.appendChild(badge);
       }
 
+      if (entry.preview) {
+        const preview = document.createElement('span');
+        preview.className = 'changelog-entry-preview';
+        preview.textContent = t('Vorschau');
+        head.appendChild(preview);
+      }
+
       const date = formatDate(entry.publishedAt);
       if (date) {
         const dateEl = document.createElement('span');

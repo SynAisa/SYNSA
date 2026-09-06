@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, shell, clipboard, Notification, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, dialog, ipcMain, shell, clipboard, Notification, nativeImage, screen } = require('electron');
 const { isInternalAppUrl } = require('./navigation-policy');
 
 const PORT = process.env.PORT || 4242;
@@ -10,6 +10,15 @@ const BASE_URL = `http://localhost:${PORT}`;
 if (!app.requestSingleInstanceLock()) {
   app.quit();
   process.exit(0);
+}
+
+// A disposable profile is useful for testing an actual first installation
+// without touching the streamer's encrypted tokens, settings or Chromium
+// storage. It is deliberately dev-only and only active when explicitly set.
+if (!app.isPackaged && process.env.SYNSA_TEST_PROFILE) {
+  const testProfile = path.resolve(process.env.SYNSA_TEST_PROFILE);
+  app.setPath('userData', path.join(testProfile, 'electron-user-data'));
+  process.env.SYNSA_DATA_DIR = path.join(testProfile, 'data');
 }
 
 // Renaming the app to SYNSA moves Electron's userData folder, and that is
@@ -205,7 +214,32 @@ function openCloseDialog(onChoice) {
 
   ipcMain.on('close-dialog:choice', onIpc);
 
-  closeDialogWindow.once('ready-to-show', () => closeDialogWindow.show());
+  closeDialogWindow.once('ready-to-show', () => {
+    // A modal child normally stays above its parent, but an asynchronous load
+    // can leave it behind the main window on Windows after a fast X click.
+    // Explicitly bringing it to the foreground makes the choice visible and
+    // keeps focus in the dialog without making it permanently topmost.
+    // `modal: true` is normally sufficient, but Windows can still restore
+    // the parent above an asynchronously loaded frameless child. Keep this
+    // tiny decision window topmost only for its own lifetime; it is destroyed
+    // by settle() immediately after a choice.
+    const parentBounds = mainWindow.getBounds();
+    const workArea = screen.getDisplayMatching(parentBounds).workArea;
+    const dialogBounds = closeDialogWindow.getBounds();
+    const x = Math.max(workArea.x, Math.min(
+      Math.round(parentBounds.x + (parentBounds.width - dialogBounds.width) / 2),
+      workArea.x + workArea.width - dialogBounds.width,
+    ));
+    const y = Math.max(workArea.y, Math.min(
+      Math.round(parentBounds.y + (parentBounds.height - dialogBounds.height) / 2),
+      workArea.y + workArea.height - dialogBounds.height,
+    ));
+    closeDialogWindow.setPosition(x, y);
+    closeDialogWindow.setAlwaysOnTop(true);
+    closeDialogWindow.show();
+    closeDialogWindow.moveTop();
+    closeDialogWindow.focus();
+  });
   closeDialogWindow.on('closed', () => {
     closeDialogWindow = null;
     settle({ action: 'cancel', remember: false });
@@ -250,9 +284,9 @@ if (USE_PRODUCTION_UPDATE_PROVIDER) {
 // Runs once per app start. No native dialog and no window management here
 // on purpose: an earlier version showed a dialog.showMessageBoxSync popup
 // and/or forced a navigation to dashboard.html, both of which interrupted
-// whatever the user was doing (setup.html included) for UX no one asked
+// whatever the user was doing (the old setup route included) for UX no one asked
 // for. The check just updates UpdateManager's state; whichever page the
-// user already has open (setup.html, dashboard.html, settings.html — see
+// user already has open (dashboard.html, settings.html — see
 // public/shared/update-banner.js, present on all three) picks the result
 // up on its own over its own WebSocket connection. Manual, on-demand
 // checks go through the exact same update.checkForUpdates() call (see
@@ -284,21 +318,14 @@ app.whenReady().then(async () => {
 
   createTray();
 
-  // A version the user hasn't been greeted by yet — a fresh installation, or
-  // the first start after an update — opens the welcome screen, which shows
-  // the version and what changed and then hands over to the setup or the
-  // dashboard itself. Otherwise the old rule still applies in its new form:
-  // with no Twitch account linked, go straight to setup rather than a
-  // dashboard that cannot work; once linked, start quietly in the tray as
-  // before. ("Linked" replaced "credentials entered" when SYNSA moved to the
-  // device code flow — see twitch/deviceAuth.js.)
+  // The dashboard is the app's home even on a fresh installation. If no
+  // Twitch account is linked, dashboard.html places the optional login modal
+  // over it; a separate setup window would make the app feel unfinished and
+  // could race with a cancelled close dialog.
   const tokenStore = require(path.join(__dirname, '..', 'twitch', 'tokenStore.js'));
-  const welcomeState = require(path.join(__dirname, '..', 'update', 'welcomeState.js'));
 
-  if (welcomeState.shouldWelcome(app.getVersion())) {
-    openAppWindow('welcome.html');
-  } else if (!tokenStore.load()) {
-    openAppWindow('setup.html');
+  if ((!mainWindow || mainWindow.isDestroyed()) && !tokenStore.load()) {
+    openAppWindow('dashboard.html');
   }
 
   checkForUpdatesOnStartup();
@@ -478,7 +505,7 @@ function createTray() {
 
   const menu = Menu.buildFromTemplate([
     { label: 'Dashboard öffnen', click: () => openAppWindow('dashboard.html') },
-    { label: 'Control-Panel öffnen', click: () => openAppWindow('control.html') },
+    { label: 'Testbereich (in Überarbeitung) öffnen', click: () => openAppWindow('control.html') },
     { label: 'Music-Overlay-Einstellungen öffnen', click: () => openAppWindow('music-settings.html') },
     { label: 'Countdown-Einstellungen öffnen', click: () => openAppWindow('countdown-settings.html') },
     { label: 'Ziel-Einstellungen öffnen', click: () => openAppWindow('goal-settings.html') },
@@ -511,7 +538,7 @@ function createTray() {
         notify('Ziel-Overlay-URL kopiert', `${BASE_URL}/overlay-goal.html`);
       },
     },
-    { label: 'Twitch-Zugangsdaten ändern', click: () => openAppWindow('setup.html') },
+    { label: 'Twitch verbinden oder ändern', click: () => openAppWindow('dashboard.html?login=1') },
     { label: 'Diagnose öffnen', click: () => openAppWindow('diagnostics.html') },
     ...(app.isPackaged
       ? [

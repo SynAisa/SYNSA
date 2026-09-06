@@ -26,7 +26,7 @@
         <span>Alerts und Chat kommen nicht mehr an. Bitte verknüpfe SYNSA erneut mit Twitch.</span>
       </div>
       <div class="update-banner-actions">
-        <a href="/setup.html" class="update-banner-primary">Neu verknüpfen</a>
+        <a href="/dashboard.html?login=1" class="update-banner-primary">Neu verknüpfen</a>
       </div>
     </div>
   `;

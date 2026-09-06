@@ -32,14 +32,20 @@
   // Assigned at the bottom, once every handler it dispatches into exists.
   let socket;
   let emoteMap = {};
+  let chatBadges = {};
 
   function handleMessage(msg) {
     if (msg.kind === 'state' && msg.state) {
       emoteMap = msg.state.emotes || {};
+      chatBadges = (msg.state.twitch && msg.state.twitch.chatBadges) || {};
       DashboardStream.applyStatus(msg.state.stream);
+      DashboardSystemMonitor.applyStatus(msg.state.system);
     }
     if (msg.kind === 'stream-status' && msg.status) {
       DashboardStream.applyStatus(msg.status);
+    }
+    if (msg.kind === 'system-status' && msg.status) {
+      DashboardSystemMonitor.applyStatus(msg.status);
     }
     if (msg.kind === 'emotes' && msg.map) {
       emoteMap = msg.map;
@@ -82,11 +88,15 @@
     // Twitch may connect after this page is already open (first run, or a
     // reconnect) — pull the data that needs a live connection once it does.
     if (msg.kind === 'twitch-status' && msg.status) {
+      chatBadges = msg.status.chatBadges || chatBadges;
       applySubscriptionWarning(msg.status.subscriptions);
       if (msg.status.connected) {
         DashboardStream.load();
         DashboardChatters.refreshCount();
       }
+    }
+    if (msg.kind === 'chat-remove-user' && msg.userId) {
+      chatMessagesEl.querySelectorAll(`[data-user-id="${CSS.escape(msg.userId)}"]`).forEach((row) => row.remove());
     }
   }
 
@@ -124,7 +134,7 @@
 
   // --- Chat ---------------------------------------------------------------
 
-  const CHAT_HIGHLIGHT_MS = 5000;
+  const CHAT_HIGHLIGHT_MS = 900;
 
   // The server composes a German sentence for anything reading the history
   // raw; here the parts are re-phrased in the interface language instead.
@@ -159,6 +169,7 @@
     // popovers' `.is-visible` — this doesn't need a rAF tick before adding
     // it; applying it immediately is exactly what worked originally.
     row.className = live ? 'chat-message chat-message--new' : 'chat-message';
+    if (message.userId) row.dataset.userId = message.userId;
     if (live) {
       setTimeout(() => row.classList.remove('chat-message--new'), CHAT_HIGHLIGHT_MS);
     }
@@ -185,19 +196,37 @@
       return;
     }
 
-    (message.badges || []).forEach((setId) => {
-      const label = BADGE_LABELS[setId];
-      if (!label) return;
-      const pill = document.createElement('span');
-      pill.className = `badge badge-${setId}`;
-      pill.textContent = label;
-      row.appendChild(pill);
+    (message.badges || []).forEach((rawBadge) => {
+      const badge = typeof rawBadge === 'string' ? { setId: rawBadge, id: '1', info: '' } : rawBadge;
+      if (!badge || !badge.setId) return;
+      const imageUrl = chatBadges[`${badge.setId}:${badge.id}`];
+      if (imageUrl) {
+        const image = document.createElement('img');
+        image.className = 'chat-badge-image';
+        image.src = imageUrl;
+        image.alt = badge.setId;
+        image.title = badge.setId === 'subscriber' && badge.info ? t('{n} Monate abonniert').replace('{n}', badge.info) : badge.setId;
+        row.appendChild(image);
+        return;
+      }
+      const label = BADGE_LABELS[badge.setId];
+      if (label) {
+        const pill = document.createElement('span');
+        pill.className = `badge badge-${badge.setId}`;
+        pill.textContent = label;
+        row.appendChild(pill);
+      }
     });
 
     const usernameEl = document.createElement('span');
     usernameEl.className = 'chat-username';
     usernameEl.textContent = message.username;
     usernameEl.style.color = message.color || 'var(--accent)';
+    if (message.userId) {
+      usernameEl.tabIndex = 0;
+      usernameEl.setAttribute('role', 'button');
+      usernameEl.addEventListener('click', (event) => { event.stopPropagation(); openProfile(event.currentTarget, message); });
+    }
     row.appendChild(usernameEl);
 
     const sep = document.createElement('span');
@@ -236,6 +265,44 @@
 
   function scrollToBottom(container) {
     container.scrollTop = container.scrollHeight;
+  }
+
+  let profilePopover = null;
+  function closeProfile() {
+    if (!profilePopover) return;
+    profilePopover.remove();
+    profilePopover = null;
+  }
+
+  function openProfile(anchor, message) {
+    closeProfile();
+    const popover = document.createElement('div');
+    profilePopover = popover;
+    popover.className = 'chat-profile-popover';
+    popover.textContent = `${message.username} · ${t('Wird geladen …')}`;
+    const rect = anchor.getBoundingClientRect();
+    popover.style.left = `${Math.min(rect.left, window.innerWidth - 260)}px`;
+    popover.style.top = `${Math.min(rect.bottom + 6, window.innerHeight - 150)}px`;
+    document.body.appendChild(popover);
+    fetch(`/api/twitch/chat-profile/${encodeURIComponent(message.userId)}`).then((res) => res.ok ? res.json() : null).then((profile) => {
+      // A delayed answer for an earlier name must not replace a newer popup.
+      if (!profile || profilePopover !== popover) return;
+      const sub = (message.badges || []).find((badge) => (badge.setId || badge) === 'subscriber');
+      const followed = profile.followedAt ? new Date(profile.followedAt).toLocaleDateString() : t('Folgt nicht');
+      popover.replaceChildren();
+      const title = document.createElement('strong'); title.textContent = message.username;
+      const details = document.createElement('span');
+      details.textContent = `${t('Folgt seit')}: ${followed}${sub && sub.info ? ` · ${sub.info} ${t('Monate abonniert')}` : ''}`;
+      const actions = document.createElement('div'); actions.className = 'chat-profile-actions';
+      [
+        ['10s', 10], ['1m', 60], ['10m', 600], ['Ban', undefined],
+      ].forEach(([label, duration]) => {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
+        button.addEventListener('click', () => { sendModeration(message.userId, message.username, duration); closeProfile(); });
+        actions.appendChild(button);
+      });
+      popover.append(title, details, actions);
+    }).catch(() => {});
   }
 
   function buildModControls(userId, username) {
@@ -306,10 +373,11 @@
     socket.send({ kind: 'moderate', userId, username, duration: seconds });
   }
 
-  document.addEventListener('click', () => {
+  document.addEventListener('click', (event) => {
     document.querySelectorAll('.mod-menu').forEach((m) => {
       m.hidden = true;
     });
+    if (profilePopover && !profilePopover.contains(event.target)) closeProfile();
   });
 
   // Each popover already closes on an outside click; Escape only ever
@@ -322,6 +390,7 @@
     document.querySelectorAll('.mod-menu').forEach((m) => {
       m.hidden = true;
     });
+    closeProfile();
     closePanel(emotePicker);
   });
 

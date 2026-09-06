@@ -1,4 +1,4 @@
-// Welcome screen shown on a fresh installation and again after every update.
+// Welcome screen shown once on a fresh installation.
 //
 // Deliberately contains no update logic of its own: it renders exactly the
 // state UpdateManager publishes (the same state the update banner on every
@@ -261,7 +261,7 @@
       // cannot work is not.
     }
 
-    window.location.href = configured ? '/dashboard.html' : '/setup.html';
+      window.location.href = configured ? '/dashboard.html' : '/dashboard.html?login=1';
   });
 
   // --- State feed ------------------------------------------------------------

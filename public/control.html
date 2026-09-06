@@ -21,10 +21,14 @@
         <div id="module-menu-root"></div>
         <h1>SYNSA</h1>
       </div>
-      <div id="status" class="status">Verbinde…</div>
     </header>
 
     <div id="auth-banner" hidden></div>
+
+    <section class="control-maintenance" role="status">
+      <strong>Testbereich in Überarbeitung</strong>
+      <span>Test-Alerts und die Lautstärkesteuerung sind vorübergehend deaktiviert. Reale Twitch-Alerts laufen unverändert weiter.</span>
+    </section>
 
     <p class="hint">
       Overlay als OBS Browser Source:
@@ -36,7 +40,7 @@
       &nbsp;·&nbsp; Größe/Transparenz wird automatisch erkannt.
     </p>
 
-    <div class="card volume-card">
+    <div class="card volume-card" aria-disabled="true">
       <div class="card-title">Master Volume</div>
       <div class="volume-row">
         <input type="range" id="volume-slider" min="0" max="100" value="60">
@@ -44,7 +48,7 @@
       </div>
     </div>
 
-    <div class="panel-grid">
+    <div class="panel-grid" aria-disabled="true">
       <form id="follow-form" class="card">
         <div class="card-title-row">
           <div class="card-title">Follow</div>

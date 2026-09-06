@@ -52,6 +52,30 @@ h1 {
   margin: 0 0 28px;
 }
 
+.control-maintenance {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(217, 167, 92, 0.5);
+  border-left: 3px solid #d9a75c;
+  border-radius: 9px;
+  background: rgba(217, 167, 92, 0.09);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.control-maintenance strong {
+  color: #d9a75c;
+}
+
+.volume-card[aria-disabled='true'],
+.panel-grid[aria-disabled='true'] {
+  opacity: 0.52;
+}
+
 .hint code {
   color: var(--highlight);
 }

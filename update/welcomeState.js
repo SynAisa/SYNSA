@@ -1,6 +1,5 @@
-// Remembers which SYNSA version the user has already been welcomed by, so the
-// welcome screen appears on a fresh installation and again after every update
-// — but not on every ordinary start.
+// Remembers whether the first-run welcome has been completed. It deliberately
+// has no version dependency: updates must never look like a fresh install.
 //
 // Read by electron/main.js when deciding which window to open, written by
 // server.js when the user actually clicks "Weiter". Both go through this one
@@ -19,8 +18,9 @@ function stateFile() {
   return path.join(getDataDir(), 'welcome-state.json');
 }
 
-// null when the user has never completed the welcome screen (fresh install,
-// or the file was removed).
+// Existing 0.2.2 files stored a version. They are an acknowledgement by
+// definition, so reading one migrates its meaning without rewriting private
+// runtime data during startup.
 function getWelcomedVersion() {
   try {
     const parsed = JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
@@ -30,11 +30,20 @@ function getWelcomedVersion() {
   }
 }
 
-function setWelcomedVersion(version) {
+function hasCompletedWelcome() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(stateFile(), 'utf8'));
+    return parsed.completed === true || typeof parsed.version === 'string';
+  } catch {
+    return false;
+  }
+}
+
+function markWelcomeCompleted() {
   try {
     const file = stateFile();
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify({ version, seenAt: new Date().toISOString() }, null, 2));
+    fs.writeFileSync(file, JSON.stringify({ completed: true, completedAt: new Date().toISOString() }, null, 2));
     return true;
   } catch (err) {
     // Not being able to record this is not worth failing the app over — the
@@ -44,10 +53,17 @@ function setWelcomedVersion(version) {
   }
 }
 
-// The welcome screen is shown for a version the user has not acknowledged yet:
-// a fresh install (nothing recorded) or a version that changed since.
-function shouldWelcome(currentVersion) {
-  return getWelcomedVersion() !== currentVersion;
+// The welcome screen is for a fresh install only. Keeping the optional
+// argument preserves compatibility with callers from older builds.
+function shouldWelcome() {
+  return !hasCompletedWelcome();
 }
 
-module.exports = { getWelcomedVersion, setWelcomedVersion, shouldWelcome };
+module.exports = {
+  getWelcomedVersion,
+  hasCompletedWelcome,
+  markWelcomeCompleted,
+  // Compatibility for the one old caller while deployments transition.
+  setWelcomedVersion: markWelcomeCompleted,
+  shouldWelcome,
+};

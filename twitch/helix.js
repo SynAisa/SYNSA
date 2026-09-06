@@ -254,6 +254,27 @@ async function getSubscribers(broadcasterId) {
   return subscribers;
 }
 
+async function getChatBadges(broadcasterId) {
+  const [globalRes, channelRes] = await Promise.all([
+    helixFetch('/chat/badges/global'),
+    helixFetch(`/chat/badges?broadcaster_id=${encodeURIComponent(broadcasterId)}`),
+  ]);
+  if (!globalRes.ok || !channelRes.ok) throw new Error('Chat badges could not be loaded');
+  const [global, channel] = await Promise.all([globalRes.json(), channelRes.json()]);
+  const index = {};
+  for (const set of [...(global.data || []), ...(channel.data || [])]) {
+    for (const version of set.versions || []) index[`${set.set_id}:${version.id}`] = version.image_url_2x || version.image_url_1x;
+  }
+  return index;
+}
+
+async function getFollower(broadcasterId, userId) {
+  const res = await helixFetch(`/channels/followers?broadcaster_id=${encodeURIComponent(broadcasterId)}&user_id=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error(`Get follower failed: ${res.status}`);
+  const body = await res.json();
+  return (body.data || [])[0] || null;
+}
+
 // Every emote the user can use: Twitch globals, their own channel's
 // subscriber emotes, and subscriber emotes from every other channel
 // they're subscribed to. Paginated, so we follow the cursor.
@@ -363,4 +384,6 @@ module.exports = {
   getModerators,
   getVips,
   getSubscribers,
+  getChatBadges,
+  getFollower,
 };

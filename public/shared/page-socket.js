@@ -1,5 +1,6 @@
 // The WebSocket connection every settings/dashboard page keeps to the local
-// server, plus the "Verbunden / Getrennt" line in its header.
+// server. A healthy local connection stays deliberately invisible; only a
+// lost connection needs to interrupt the page with a clear warning.
 //
 // This was the same twenty lines copied into five pages — identical down to
 // the reconnect delay and the status text — so a fix or a change had to be
@@ -17,21 +18,21 @@
   // Returns { send, isOpen } — send() JSON-encodes and only writes on an open
   // socket, which is exactly the guard every call site used to repeat.
   window.connectPageSocket = function connectPageSocket(onMessage) {
-    const statusEl = document.getElementById('status');
+    let warningEl = document.getElementById('local-connection-warning');
+    if (!warningEl) {
+      warningEl = document.createElement('div');
+      warningEl.id = 'local-connection-warning';
+      warningEl.className = 'local-connection-warning';
+      warningEl.hidden = true;
+      const page = document.querySelector('.page');
+      if (page) page.prepend(warningEl);
+    }
     let ws = null;
 
-    // Named "SYNSA", not just "Verbunden": this is the page's live connection
-    // to SYNSA's own local server, and it sat right above a *Twitch* status
-    // saying "Verbunden as well" on the control panel. Two different things
-    // reading the same word in the same window is a question waiting to be
-    // asked, and it was.
     function setStatus(connected) {
-      if (!statusEl) return;
-      statusEl.textContent = t(connected ? 'SYNSA verbunden' : 'SYNSA getrennt – neuer Versuch …');
-      statusEl.title = connected
-        ? t('Diese Seite ist mit SYNSA verbunden und wird live aktualisiert. Sagt nichts über die Twitch-Verbindung aus.')
-        : t('Diese Seite hat gerade keine Verbindung zu SYNSA und zeigt womöglich veraltete Werte. Sagt nichts über die Twitch-Verbindung aus.');
-      statusEl.classList.toggle('is-connected', connected);
+      if (!warningEl) return;
+      warningEl.hidden = connected;
+      if (!connected) warningEl.textContent = t('Die Verbindung zur lokalen SYNSA-App wurde unterbrochen. Neuer Versuch …');
     }
 
     function connect() {

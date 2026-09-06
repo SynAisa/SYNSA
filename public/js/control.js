@@ -7,6 +7,14 @@
 
   const volumeSlider = document.getElementById('volume-slider');
   const volumeValue = document.getElementById('volume-value');
+  const maintenanceMessage = 'Der Testbereich wird gerade überarbeitet.';
+
+  // The server rejects the same messages as a second line of defence. Keeping
+  // the UI controls disabled means the maintenance state is obvious before a
+  // user tries an action, while real Twitch events keep their normal path.
+  document.querySelectorAll('.volume-card input, .panel-grid input, .panel-grid select, .panel-grid button').forEach((control) => {
+    control.disabled = true;
+  });
 
   // Assigned at the very bottom, once every handler it dispatches into
   // exists. Nothing sends before then.
@@ -18,6 +26,7 @@
   function handleMessage(msg) {
     if (msg.kind === 'state' && msg.state) applyVolume(msg.state.volume, false);
     if (msg.kind === 'volume') applyVolume(msg.volume, false);
+    if (msg.kind === 'control-panel-disabled') window.SynsaUI.showToast(t(msg.message || maintenanceMessage));
   }
 
   function applyVolume(volume, send) {
