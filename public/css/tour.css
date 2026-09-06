@@ -1,0 +1,141 @@
+/* Guided dashboard tour (public/js/dashboard/tour.js).
+   Everything here only exists while the tour is running: the dimming layer
+   and the card are added to <body> and removed again, and the highlight is a
+   single class on the real panel. Nothing changes the dashboard's layout —
+   .panel is already position:relative, so lifting it above the dimming layer
+   costs a z-index and moves nothing.
+
+   The dashboard's own layers top out at z-index 100 (the toast), so the tour
+   sits above that. */
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(4, 8, 8, 0.72);
+  /* Swallows clicks on the dimmed dashboard while the tour runs; the card and
+     the highlighted panel sit above and stay usable. */
+}
+
+.tour-highlight {
+  z-index: 901;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Card --- */
+
+.tour-card {
+  position: fixed;
+  z-index: 910;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #131a1a;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.tour-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tour-progress {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-close {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.tour-close:hover {
+  color: var(--text);
+}
+
+.tour-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tour-text p {
+  margin: 0 0 9px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(241, 245, 243, 0.85);
+}
+
+.tour-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Actions --- */
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.tour-btn {
+  border-radius: 8px;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-btn-secondary {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.tour-btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tour-btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tour-btn-primary {
+  border: 0;
+  background: var(--accent);
+  color: #08100e;
+}
+
+.tour-btn-primary:hover {
+  background: var(--highlight);
+}
+
+/* On a narrow window the card would otherwise sit next to a panel with no
+   room left for either. */
+@media (max-width: 720px) {
+  .tour-card {
+    width: calc(100vw - 24px);
+  }
+}

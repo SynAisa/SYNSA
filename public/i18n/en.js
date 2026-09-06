@@ -111,6 +111,32 @@ window.SynsaTranslationsEn = {
   '. Version und Änderungsliste stehen unter': '. Version and changelog are under',
   'Control-Panel': 'Control panel',
 
+  // --- Dashboard tour --------------------------------------------------------
+  Hilfe: 'Help',
+  'Erklärt dir die Bereiche des Dashboards': 'Explains what the parts of the dashboard are for',
+  'Dashboard-Rundgang starten': 'Start dashboard tour',
+  'Rundgang schließen': 'Close tour',
+  Fertig: 'Done',
+
+  'Hier kannst du die Kategorie und den Titel deines Streams festlegen. Änderungen werden direkt auf Twitch übernommen. Dafür muss dein Twitch-Konto mit SYNSA verknüpft sein.':
+    'Here you set your stream’s title and category. Changes are applied on Twitch straight away. Your Twitch account has to be linked to SYNSA for that.',
+
+  'Hier laufen die Ereignisse deines Streams auf, das Neueste zuunterst.':
+    'This is where your stream’s events arrive, newest at the bottom.',
+  'Es gibt vier Typen, jeder mit eigenem Symbol: New Follower, New Subscriber (bei verschenkten Abos Gift Sub), Cheer und Raid. Über die Knöpfe darüber blendest du einzelne Typen aus.':
+    'There are four types, each with its own icon: New Follower, New Subscriber (Gift Sub for gifted ones), Cheer and Raid. The buttons above let you hide individual types.',
+  'Jede Zeile zeigt zusätzlich, ob ein Alert noch wartet, gerade abgespielt wird oder schon durch ist.':
+    'Each row also shows whether an alert is still waiting, currently playing, or already done.',
+
+  'Hier kannst du den Twitch-Chat direkt über SYNSA verfolgen und moderieren.':
+    'Here you can follow and moderate your Twitch chat directly from SYNSA.',
+  'Über die drei Punkte neben einer Nachricht öffnest du die Moderationsaktionen.':
+    'The three dots next to a message open the moderation actions.',
+  'Ein Timeout sperrt einen Nutzer vorübergehend vom Chat.':
+    'A timeout blocks a user from chat temporarily.',
+  'Ein Ban sperrt einen Nutzer dauerhaft aus deinem Chat, bis du ihn wieder entbannst.':
+    'A ban blocks a user from your chat permanently, until you unban them.',
+
   // --- Setup -----------------------------------------------------------------
   Einrichtung: 'Setup',
   'SYNSA arbeitet direkt mit deinem Twitch-Kanal. Dafür verbindest du einmalig dein Twitch-Konto — die Bestätigung passiert bei Twitch selbst, in deinem normalen Browser.':
