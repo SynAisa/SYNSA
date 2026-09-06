@@ -871,11 +871,15 @@ function clampLayoutColumns(value) {
 function loadUiState() {
   try {
     const saved = JSON.parse(fs.readFileSync(UI_STATE_FILE, 'utf8'));
+    // 0.2.2 remembered a completed welcome in its own file. If this is the
+    // first 0.2.3 read (there is no loginDismissed field yet), carry that
+    // acknowledgement forward so an update never looks like a fresh install.
+    const hasStoredLoginDismissal = typeof saved.loginDismissed === 'boolean';
     return {
       tourSeenVersion: Number(saved.tourSeenVersion) || 0,
       language: saved.language === 'en' || saved.language === 'de' ? saved.language : null,
       layoutColumns: clampLayoutColumns(saved.layoutColumns),
-      loginDismissed: saved.loginDismissed === true,
+      loginDismissed: hasStoredLoginDismissal ? saved.loginDismissed : welcomeState.hasCompletedWelcome(),
       hiddenSystemMetrics: normalizeHiddenSystemMetrics(saved.hiddenSystemMetrics),
     };
   } catch {
@@ -935,7 +939,7 @@ const DEVELOPMENT_CHANGELOG = {
     'Der neue Systemstatus zeigt CPU, Arbeitsspeicher und Netzwerkwerte direkt im Dashboard.',
     'Die lokale Verbindung läuft im Hintergrund; ein Hinweis erscheint nur noch bei einer Störung.',
     'Der Testbereich wird überarbeitet und ist deshalb vorübergehend deaktiviert.',
-    'Chat und Alert Box lassen sich einfacher in der Breite anpassen und zurücksetzen.',
+    'Der Chat zeigt Twitch-Badges, kompaktere neue Nachrichten und Profilaktionen direkt am Namen.',
   ],
 };
 

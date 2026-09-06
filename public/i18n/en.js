@@ -47,6 +47,8 @@ window.SynsaTranslationsEn = {
   'Hohe Latenz': 'High latency',
   'Paketverlust erkannt': 'Packet loss detected',
   Normal: 'Normal',
+  Ausblenden: 'Hide',
+  Anzeigen: 'Show',
   'Der Testbereich wird gerade überarbeitet.': 'The test area is currently being rebuilt.',
   'Willkommen bei SYNSA': 'Welcome to SYNSA',
   'Dein Stream, übersichtlich an einem Ort.': 'Your stream, organized in one place.',

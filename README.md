@@ -6,7 +6,7 @@ Ein lokales Windows-Programm zum Streamen auf Twitch: Alerts, ein Chat-Dashboard
 
 <!-- Dieser Abschnitt wird bei jedem Release aktualisiert. -->
 
-- **Aktuelle Version: 0.2.2** ([alle Releases](https://github.com/SynAisa/SYNSA/releases))
+- **Aktuelle Version: 0.2.3** ([alle Releases](https://github.com/SynAisa/SYNSA/releases))
 - Öffentlich installierbar: ja, der Installer liegt unter [Releases](https://github.com/SynAisa/SYNSA/releases/latest)
 - Automatische Updates funktionieren und sind gegen echte Releases getestet; geladen wird nur der geänderte Teil des Installers
 - SYNSA ist weiterhin in **aktiver Entwicklung** — zwischen Versionen kann sich Verhalten ändern, und es gibt noch raue Kanten
@@ -41,7 +41,7 @@ Den Installer gibt es beim [neuesten Release](https://github.com/SynAisa/SYNSA/r
 
 - [**SYNSA-Setup.exe**](https://github.com/SynAisa/SYNSA/releases/latest/download/SYNSA-Setup.exe) — dieser Link zeigt immer auf die aktuellste Version
 
-Die Installation braucht Administratorrechte (SYNSA wird für alle Benutzer installiert). Danach startet SYNSA im Tray; der Willkommensbildschirm führt durch die Verknüpfung mit Twitch.
+Die Installation braucht Administratorrechte (SYNSA wird für alle Benutzer installiert). Danach startet SYNSA im Tray und öffnet das Dashboard. Bei einer frischen Installation erklärt ein kompaktes Popup die wichtigsten Neuerungen und führt auf Wunsch zur Twitch-Verknüpfung.
 
 Für die Twitch-Verbindung brauchst du **keine eigene Twitch-Anwendung**. SYNSA ist als öffentlicher Twitch-Client registriert und nutzt den Device-Code-Flow: Du bekommst einen Code, bestätigst ihn auf twitch.tv, fertig. Dein Twitch-Passwort gibst du nie in SYNSA ein.
 

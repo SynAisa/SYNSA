@@ -46,7 +46,7 @@ The project provides:
 
 
 
-Aktuelle Version: 0.2.2. Öffentlich installierbar, automatische Updates funktionieren gegen echte Releases.
+Aktuelle Version: 0.2.3. Öffentlich installierbar, automatische Updates funktionieren gegen echte Releases.
 
 
 
