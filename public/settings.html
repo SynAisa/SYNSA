@@ -65,6 +65,19 @@
     <!-- Starts the guided tour on the dashboard (public/js/dashboard/tour.js);
          the link carries the request, the dashboard picks it up. -->
     <div class="card">
+      <div class="card-title">Fenster</div>
+      <div class="twitch-row">
+        <span class="twitch-status" id="close-behavior-note">Beim Klick auf das X</span>
+        <select id="close-behavior-select" class="language-select">
+          <option value="ask">Jedes Mal fragen</option>
+          <option value="tray">In den Tray minimieren</option>
+          <option value="quit">SYNSA beenden</option>
+        </select>
+      </div>
+      <p class="setup-note">Im Tray läuft SYNSA weiter — Alerts, Chat und die Overlays in OBS bleiben aktiv.</p>
+    </div>
+
+    <div class="card">
       <div class="card-title">Hilfe</div>
       <div class="twitch-row">
         <span class="twitch-status">Erklärt dir die Bereiche des Dashboards</span>

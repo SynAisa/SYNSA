@@ -67,5 +67,37 @@
     }
   });
 
+  // --- Window close behavior ---------------------------------------------
+
+  // The same setting the close dialog offers to remember (see the close
+  // handler in electron/main.js). Both sides go through the one JSON file the
+  // server reads and writes, so whichever place it was last changed in wins.
+  const closeBehaviorSelect = document.getElementById('close-behavior-select');
+
+  fetch('/api/close-behavior')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      if (data && data.closeBehavior) closeBehaviorSelect.value = data.closeBehavior;
+    })
+    .catch(() => {
+      // Leaves the select on "Jedes Mal fragen", which is also the fallback
+      // the app itself uses when nothing is stored.
+    });
+
+  closeBehaviorSelect.addEventListener('change', async () => {
+    closeBehaviorSelect.disabled = true;
+    try {
+      const res = await fetch('/api/close-behavior', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closeBehavior: closeBehaviorSelect.value }),
+      });
+      if (!res.ok) window.SynsaUI.showToast(t('Speichern fehlgeschlagen.'));
+    } catch {
+      window.SynsaUI.showToast(t('Speichern fehlgeschlagen.'));
+    }
+    closeBehaviorSelect.disabled = false;
+  });
+
   connectPageSocket(handleMessage);
 })();

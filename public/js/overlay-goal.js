@@ -55,7 +55,12 @@
       retryDelay = 1500;
       // Purely so the server knows this Browser Source exists, for the
       // diagnostics page. No behaviour depends on it.
-      ws.send(JSON.stringify({ kind: 'register', role: 'overlay-goal' }));
+      // The embedded preview on the settings page loads this same URL with
+      // ?preview=1. It must not count as a Browser Source in OBS, or the
+      // connection status on that very page would always read "connected".
+      if (!new URLSearchParams(location.search).has('preview')) {
+        ws.send(JSON.stringify({ kind: 'register', role: 'overlay-goal' }));
+      }
     });
 
     ws.addEventListener('message', (event) => {

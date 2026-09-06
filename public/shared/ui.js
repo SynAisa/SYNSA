@@ -48,9 +48,13 @@
 
   const TOAST_MS = 4000;
 
-  function showToast(text) {
+  // tone defaults to the error look this has always had — every existing
+  // caller reports a failure. Pass 'success' for a confirmation, so
+  // "Gespeichert" doesn't arrive wearing the red border that means
+  // "something went wrong".
+  function showToast(text, tone) {
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = tone === 'success' ? 'toast is-success' : 'toast';
     toast.textContent = text;
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));

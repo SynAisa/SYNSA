@@ -10,6 +10,10 @@
 <link rel="stylesheet" href="/css/theme.css">
 <link rel="stylesheet" href="/css/control.css">
 <link rel="stylesheet" href="/css/nav.css">
+<link rel="stylesheet" href="/css/overlay-panel.css">
+<!-- For the shared toast (window.SynsaUI.showToast), which lives here
+     alongside the update banner's styles. -->
+<link rel="stylesheet" href="/css/update.css">
 </head>
 <body>
   <div class="page">
@@ -20,6 +24,8 @@
       </div>
       <div id="status" class="status">Verbinde…</div>
     </header>
+
+    <div id="overlay-header" data-role="countdown" data-path="/overlay-countdown.html"></div>
 
     <p class="hint">
       "Starting Soon"-Countdown für OBS. Dauer eingeben und starten — die
@@ -75,33 +81,26 @@
       </div>
     </form>
 
+    <!-- Distinct from the embedded overlay preview below: this one shows the
+         form as it stands right now, before Start has been pressed. -->
     <div class="card">
-      <div class="card-title">Vorschau</div>
+      <div class="card-title">Entwurf</div>
       <div class="countdown-preview-box" id="countdown-preview-box">
         <div class="countdown-preview-label" id="countdown-preview-label">Starting Soon</div>
         <div class="countdown-preview-value" id="countdown-preview-value">10:00</div>
       </div>
+      <p class="countdown-draft-note">So sieht der Countdown mit den aktuellen Eingaben aus — gestartet wird er erst mit "Starten".</p>
     </div>
 
-    <div class="card">
-      <div class="card-title">Overlay-URL</div>
-      <p class="hint" style="margin-bottom: 0;">
-        Als OBS Browser Source:
-        <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay-countdown.html">
-          <code class="reveal-copy-value"></code>
-          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
-          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
-        </span>
-      </p>
-    </div>
+    <div id="overlay-preview"></div>
   </div>
 
   <script src="/i18n/en.js"></script>
   <script src="/shared/i18n.js"></script>
   <script src="/shared/ui.js"></script>
   <script src="/shared/module-menu.js"></script>
-  <script src="/shared/reveal-copy.js"></script>
   <script src="/shared/page-socket.js"></script>
+  <script src="/shared/overlay-panel.js"></script>
   <script src="/js/countdown-settings.js"></script>
 </body>
 </html>

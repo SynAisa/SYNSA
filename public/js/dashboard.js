@@ -126,6 +126,32 @@
 
   const CHAT_HIGHLIGHT_MS = 5000;
 
+  // The server composes a German sentence for anything reading the history
+  // raw; here the parts are re-phrased in the interface language instead.
+  // Falls back to that sentence if an older server sent no parts.
+  function moderationText(message) {
+    const info = message.moderation;
+    if (!info) return message.text || '';
+
+    if (info.action === 'ban') {
+      return t('{name} wurde gebannt.').replace('{name}', info.username);
+    }
+
+    const seconds = Number(info.durationSeconds);
+    let duration;
+    if (!Number.isFinite(seconds) || seconds <= 0) duration = '';
+    else if (seconds < 60) duration = seconds === 1 ? t('1 Sekunde') : t('{n} Sekunden').replace('{n}', seconds);
+    else if (seconds % 3600 === 0) {
+      const hours = seconds / 3600;
+      duration = hours === 1 ? t('1 Stunde') : t('{n} Stunden').replace('{n}', hours);
+    } else if (seconds % 60 === 0) {
+      const minutes = seconds / 60;
+      duration = minutes === 1 ? t('1 Minute') : t('{n} Minuten').replace('{n}', minutes);
+    } else duration = t('{n} Sekunden').replace('{n}', seconds);
+
+    return t('{name} wurde für {d} stumm geschaltet.').replace('{name}', info.username).replace('{d}', duration);
+  }
+
   function renderChatMessage(message, { autoScroll = true, live = true } = {}) {
     const row = document.createElement('div');
     // A `@keyframes animation` (unlike a `transition`) starts from its own
@@ -144,6 +170,20 @@
     timeEl.className = 'chat-time';
     timeEl.textContent = formatClockTime(message.timestamp);
     row.appendChild(timeEl);
+
+    // A confirmed moderation action (see recordModerationNotice in server.js).
+    // Same row, same timestamp, but deliberately plain: no colour, no badges,
+    // no name to click — it is the log saying what happened, not somebody
+    // talking.
+    if (message.system) {
+      row.classList.add('chat-message--system');
+      const noticeEl = document.createElement('span');
+      noticeEl.className = 'chat-system-text';
+      noticeEl.textContent = moderationText(message);
+      row.appendChild(noticeEl);
+      appendRow(chatMessagesEl, row, { autoScroll });
+      return;
+    }
 
     (message.badges || []).forEach((setId) => {
       const label = BADGE_LABELS[setId];
@@ -171,7 +211,7 @@
     row.appendChild(textEl);
 
     if (message.userId) {
-      row.appendChild(buildModControls(message.userId));
+      row.appendChild(buildModControls(message.userId, message.username));
     }
 
     appendRow(chatMessagesEl, row, { autoScroll });
@@ -198,7 +238,7 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  function buildModControls(userId) {
+  function buildModControls(userId, username) {
     const wrapper = document.createElement('span');
     wrapper.className = 'mod-controls';
 
@@ -227,7 +267,7 @@
         btn.textContent = label;
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
-          sendModeration(userId, seconds);
+          sendModeration(userId, username, seconds);
           menu.hidden = true;
         });
         menu.appendChild(btn);
@@ -239,7 +279,7 @@
       banBtn.textContent = 'Ban';
       banBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        sendModeration(userId, undefined);
+        sendModeration(userId, username, undefined);
         menu.hidden = true;
       });
       menu.appendChild(banBtn);
@@ -260,8 +300,10 @@
     return wrapper;
   }
 
-  function sendModeration(userId, seconds) {
-    socket.send({ kind: 'moderate', userId, duration: seconds });
+  function sendModeration(userId, username, seconds) {
+    // The name travels with the request so the server can name it in the
+    // confirmation line without a second Twitch lookup.
+    socket.send({ kind: 'moderate', userId, username, duration: seconds });
   }
 
   document.addEventListener('click', () => {

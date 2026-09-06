@@ -70,6 +70,10 @@
           </button>
           <div id="chatters-panel" class="chatters-panel" hidden>
             <input type="text" id="chatters-search" class="chatters-search" placeholder="Suchen…" autocomplete="off">
+            <!-- Twitch's Get-Chatters endpoint picks new chatters up with a
+                 delay of its own; saying so beats letting it look like SYNSA
+                 is showing a stale list. -->
+            <p class="chatters-note">Twitch liefert diese Liste mit Verzögerung — neue Chatter tauchen oft erst nach ein paar Minuten auf.</p>
             <div id="chatters-list" class="chatters-list"></div>
           </div>
         </div>

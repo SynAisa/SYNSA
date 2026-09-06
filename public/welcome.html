@@ -44,6 +44,35 @@
       </div>
     </section>
 
+    <!-- Asked by a tester: can the person who made SYNSA see my data if I
+         link my own Twitch account? The answer is no, and until now it was
+         only written down in the README on GitHub. Wording follows the
+         README's "Privacy / Local Data" section. -->
+    <section class="welcome-privacy">
+      <h2 class="welcome-privacy-title">Deine Daten bleiben bei dir</h2>
+      <p>
+        SYNSA läuft vollständig auf deinem eigenen Rechner. Es gibt keinen Server
+        des Entwicklers dazwischen: Das Programm spricht direkt mit Twitch und
+        — falls du das Musik-Overlay nutzt — mit der YouTube-Music-App auf
+        diesem PC.
+      </p>
+      <p>
+        <strong>
+          Niemand hat Zugriff auf deine Anmeldedaten — auch der Entwickler von
+          SYNSA nicht. Deine Twitch-Zugangsdaten, deine Chat-Inhalte und dein
+          Alert-Verlauf verlassen diesen Rechner nicht.
+        </strong>
+      </p>
+      <p>
+        Beim Verknüpfen gibst du dein Passwort nie in SYNSA ein: Du bestätigst
+        die Verbindung direkt bei Twitch. Der Zugangsschlüssel, den Twitch
+        danach ausstellt, wird verschlüsselt auf dieser Festplatte abgelegt
+        (über Electrons safeStorage) und nur benutzt, um Alerts, Chat und
+        Stream-Infos zu holen. Du kannst die Verbindung jederzeit in den
+        Einstellungen wieder trennen.
+      </p>
+    </section>
+
     <footer class="welcome-footer">
       <span class="footer-note" id="footer-note"></span>
       <button type="button" id="continue-btn" class="continue-btn">Weiter</button>

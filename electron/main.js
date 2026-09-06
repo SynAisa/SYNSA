@@ -108,6 +108,40 @@ if (app.isPackaged) {
 let mainWindow = null;
 let isQuitting = false;
 
+// What the window's X button does. Stored as a small JSON file in the data
+// directory, the same way countdown.json and music-settings.json are — the
+// settings page reads and writes it through the server (see
+// /api/close-behavior), and this process reads it fresh on every close so a
+// change made in that page takes effect without a restart.
+//
+//   'ask'  — show the dialog (default)
+//   'tray' — hide to the tray, the behaviour this always had
+//   'quit' — really quit
+const CLOSE_BEHAVIORS = new Set(['ask', 'tray', 'quit']);
+const { getDataDir } = require(path.join(__dirname, '..', 'twitch', 'dataDir.js'));
+const WINDOW_SETTINGS_FILE = path.join(getDataDir(), 'window-settings.json');
+
+function readCloseBehavior() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(WINDOW_SETTINGS_FILE, 'utf8'));
+    return CLOSE_BEHAVIORS.has(saved.closeBehavior) ? saved.closeBehavior : 'ask';
+  } catch {
+    return 'ask';
+  }
+}
+
+function writeCloseBehavior(value) {
+  try {
+    fs.mkdirSync(path.dirname(WINDOW_SETTINGS_FILE), { recursive: true });
+    fs.writeFileSync(WINDOW_SETTINGS_FILE, JSON.stringify({ closeBehavior: value }));
+  } catch (err) {
+    console.error('Could not save window close behavior:', err.message);
+  }
+}
+
+// Clicking X twice before answering would otherwise stack dialogs.
+let closePromptOpen = false;
+
 const update = require(path.join(__dirname, '..', 'update', 'manager.js'));
 
 // The provider decision itself lives in update/manager.js (packaged app ->
@@ -305,11 +339,68 @@ function openAppWindow(pagePath) {
     return { action: 'deny' };
   });
 
+  // isQuitting is set by the tray's "Beenden" and by app.before-quit, and
+  // those keep going straight through here untouched — this dialog is only
+  // ever about the window's own X button.
   mainWindow.on('close', (e) => {
-    if (!isQuitting) {
-      e.preventDefault();
+    if (isQuitting) return;
+
+    e.preventDefault();
+
+    const behavior = readCloseBehavior();
+    if (behavior === 'tray') {
       mainWindow.hide();
+      return;
     }
+    if (behavior === 'quit') {
+      isQuitting = true;
+      app.quit();
+      return;
+    }
+
+    if (closePromptOpen) return;
+    closePromptOpen = true;
+
+    // Async rather than showMessageBoxSync: only the async form reports the
+    // checkbox back. The close is already prevented above, so the window
+    // simply stays open until this resolves.
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'question',
+        title: 'SYNSA schließen',
+        message: 'Soll SYNSA im Hintergrund weiterlaufen?',
+        detail:
+          'Im Tray läuft SYNSA weiter: Alerts, Chat und die Overlays in OBS bleiben aktiv. Beim Beenden hören sie auf zu funktionieren, bis du SYNSA wieder startest.',
+        buttons: ['In den Tray minimieren', 'SYNSA beenden', 'Abbrechen'],
+        defaultId: 0,
+        cancelId: 2,
+        checkboxLabel: 'Diese Wahl merken',
+        checkboxChecked: false,
+        noLink: true,
+      })
+      .then(({ response, checkboxChecked }) => {
+        closePromptOpen = false;
+
+        // Cancel leaves everything as it is — no hiding, no quitting.
+        if (response === 2) return;
+
+        const chosen = response === 1 ? 'quit' : 'tray';
+        if (checkboxChecked) writeCloseBehavior(chosen);
+
+        if (chosen === 'quit') {
+          isQuitting = true;
+          app.quit();
+        } else {
+          mainWindow.hide();
+        }
+      })
+      .catch((err) => {
+        closePromptOpen = false;
+        // Never leave the user unable to close the window because a dialog
+        // failed — fall back to the behaviour this always had.
+        console.error('Close dialog failed:', err.message);
+        mainWindow.hide();
+      });
   });
 
   mainWindow.on('closed', () => {

@@ -43,7 +43,9 @@
   }
 
   function renderPreviewChrome() {
-    previewLabel.textContent = labelInput.value || 'Starting Soon';
+    // No fallback caption here either: the preview has to show what the
+    // overlay will show, and an empty label now really means no caption.
+    previewLabel.textContent = labelInput.value;
     previewBox.className = `countdown-preview-box size-${fontSizeSelect.value}`;
     previewBox.style.setProperty('--countdown-preview-glow', glowFrom(colorInput.value));
   }
@@ -134,27 +136,50 @@
     tickTimer = setInterval(tick, 1000);
   }
 
+  const { showToast } = window.SynsaUI;
+
+  // Submitted by the Start button and by Enter in any of the fields — the
+  // latter is plain HTML form behaviour and needs nothing extra, which is
+  // exactly why the duration fields can lose their stepper arrows without
+  // losing a way to confirm.
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const minutes = parseInt(minutesInput.value, 10) || 0;
     const seconds = parseInt(secondsInput.value, 10) || 0;
     const durationSeconds = minutes * 60 + seconds;
-    if (durationSeconds <= 0) return;
+    if (durationSeconds <= 0) {
+      showToast(t('Bitte eine Dauer über 0 eingeben.'));
+      return;
+    }
 
-    await fetch('/api/countdown/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        durationSeconds,
-        label: labelInput.value,
-        accentColor: colorInput.value,
-        fontSize: fontSizeSelect.value,
-      }),
-    });
+    // Until now this was a silent await: on success nothing happened on
+    // screen except the countdown quietly starting, and on failure nothing
+    // happened at all.
+    try {
+      const res = await fetch('/api/countdown/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          durationSeconds,
+          label: labelInput.value,
+          accentColor: colorInput.value,
+          fontSize: fontSizeSelect.value,
+        }),
+      });
+      if (res.ok) showToast(t('Gespeichert'), 'success');
+      else showToast(t('Speichern fehlgeschlagen.'));
+    } catch {
+      showToast(t('Speichern fehlgeschlagen.'));
+    }
   });
 
   stopBtn.addEventListener('click', async () => {
-    await fetch('/api/countdown/stop', { method: 'POST' });
+    try {
+      const res = await fetch('/api/countdown/stop', { method: 'POST' });
+      if (!res.ok) showToast(t('Countdown konnte nicht gestoppt werden.'));
+    } catch {
+      showToast(t('Countdown konnte nicht gestoppt werden.'));
+    }
   });
 
   async function loadInitial() {

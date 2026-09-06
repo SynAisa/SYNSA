@@ -224,3 +224,8 @@ a.update-banner-primary {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* Confirmations use the accent instead of the default red border. */
+.toast.is-success {
+  border-color: rgba(53, 201, 168, 0.45);
+}

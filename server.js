@@ -14,6 +14,10 @@ const seventv = require('./twitch/seventv');
 const { getDataDir } = require('./twitch/dataDir');
 const musicTokenStore = require('./music/tokenStore');
 const music = require('./music/companion');
+const spotifyConfig = require('./spotify/config');
+const spotifyTokenStore = require('./spotify/tokenStore');
+const spotifyAuth = require('./spotify/auth');
+const spotify = require('./spotify/nowPlaying');
 const update = require('./update/manager');
 const welcomeState = require('./update/welcomeState');
 const releaseNotes = require('./update/releaseNotes');
@@ -345,7 +349,15 @@ wss.on('connection', (ws) => {
       applyStreamStatus(msg.status);
     }
 
-    // Test hook mirroring the four above: puts the Twitch connection into the
+    // Test hook in the same family: writes the confirmation line a successful
+    // timeout/ban produces, without needing a real viewer to moderate. Calls
+    // the very function the success path calls, so it exercises the real
+    // behaviour rather than a parallel one.
+    if (msg.kind === 'trigger-moderation-notice') {
+      recordModerationNotice(msg.username || 'TestUser', msg.duration);
+    }
+
+    // Test hook mirroring the ones above: puts the Twitch connection into the
     // "this authorization is gone" state without needing a real revocation on
     // Twitch's side, and takes it back out again with { revoked: false }.
     // Goes through the exact same eventsub functions a real revocation uses,
@@ -381,8 +393,13 @@ wss.on('connection', (ws) => {
     if (msg.kind === 'moderate' && typeof msg.userId === 'string') {
       const broadcasterId = eventsub.getBroadcasterId();
       if (broadcasterId) {
+        // The name comes along from the chat row the action was started from,
+        // so confirming it needs no extra Helix lookup.
+        const username =
+          typeof msg.username === 'string' && msg.username.trim() ? msg.username.trim().slice(0, 60) : msg.userId;
         helix
           .banUser(broadcasterId, broadcasterId, { userId: msg.userId, duration: msg.duration })
+          .then(() => recordModerationNotice(username, msg.duration))
           .catch((err) => {
             console.error('Moderation action failed:', err.message);
             if (ws.readyState === ws.OPEN) {
@@ -501,6 +518,49 @@ function recordChatMessage(message) {
   broadcast({ kind: 'chat-message', message });
 }
 
+// Seconds into the wording the moderation menu itself uses, so the line in
+// the chat log reads like the button that produced it.
+function formatTimeoutDuration(seconds) {
+  const total = Math.round(Number(seconds));
+  if (!Number.isFinite(total) || total <= 0) return null;
+  if (total < 60) return total === 1 ? '1 Sekunde' : `${total} Sekunden`;
+  if (total % 3600 === 0) {
+    const hours = total / 3600;
+    return hours === 1 ? '1 Stunde' : `${hours} Stunden`;
+  }
+  if (total % 60 === 0) {
+    const minutes = total / 60;
+    return minutes === 1 ? '1 Minute' : `${minutes} Minuten`;
+  }
+  return `${total} Sekunden`;
+}
+
+// A timeout or ban that Twitch actually accepted, written into the chat log
+// as its own line. Deliberately only on success: a failed attempt keeps the
+// existing moderation-error path back to the client that asked for it, and
+// must not leave a line claiming something happened that didn't.
+//
+// Goes through recordChatMessage() like any other line, so it lands in the
+// same history, reaches every client on the same broadcast, and carries the
+// same timestamp field the renderer already formats. `system: true` is what
+// keeps it from being drawn as a real chat message.
+function recordModerationNotice(username, durationSeconds) {
+  const duration = formatTimeoutDuration(durationSeconds);
+  recordChatMessage({
+    id: crypto.randomUUID(),
+    system: true,
+    // The parts, so the dashboard can phrase this in the interface language
+    // instead of being stuck with the German composed below.
+    moderation: {
+      action: duration ? 'timeout' : 'ban',
+      username,
+      durationSeconds: duration ? Math.round(Number(durationSeconds)) : null,
+    },
+    text: duration ? `${username} wurde für ${duration} stumm geschaltet.` : `${username} wurde gebannt.`,
+    timestamp: Date.now(),
+  });
+}
+
 // Once the user approves in their browser, the device flow finishes the same
 // way the old OAuth callback did: bring Twitch up right away rather than
 // waiting for the next restart.
@@ -548,6 +608,10 @@ function applyMusicStatus(status) {
 }
 
 music.init({ onStatus: applyMusicStatus });
+// Both sources report through the same callback, so state.music never learns
+// which one filled it. applyMusicSource() guarantees only one of them is
+// running at a time.
+spotify.init({ onStatus: applyMusicStatus });
 
 // --- Updates (Phase 2A: local test provider only) ---------------------------
 
@@ -575,6 +639,57 @@ update.onChange((updateState) => {
 // window title) — reads package.json rather than duplicating the number.
 app.get('/api/version', (req, res) => {
   res.json({ version: require('./package.json').version });
+});
+
+// --- Window close behavior ---------------------------------------------------
+
+// What the window's X button does, shared with electron/main.js through this
+// one small file — the same shape as countdown.json/music-settings.json.
+// Deliberately read from disk on every request instead of cached in `state`:
+// the Electron main process writes this file too (when the close dialog's
+// "remember" box is ticked), so a cached copy here would go stale the moment
+// the user answered that dialog.
+const WINDOW_SETTINGS_FILE = path.join(DATA_DIR, 'window-settings.json');
+const CLOSE_BEHAVIORS = new Set(['ask', 'tray', 'quit']);
+
+app.get('/api/close-behavior', (req, res) => {
+  let closeBehavior = 'ask';
+  try {
+    const saved = JSON.parse(fs.readFileSync(WINDOW_SETTINGS_FILE, 'utf8'));
+    if (CLOSE_BEHAVIORS.has(saved.closeBehavior)) closeBehavior = saved.closeBehavior;
+  } catch {
+    // Nothing saved yet — asking is the default.
+  }
+  res.json({ closeBehavior });
+});
+
+app.post('/api/close-behavior', (req, res) => {
+  if (!CLOSE_BEHAVIORS.has(req.body.closeBehavior)) {
+    res.status(400).json({ error: 'Unbekannte Einstellung' });
+    return;
+  }
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(WINDOW_SETTINGS_FILE, JSON.stringify({ closeBehavior: req.body.closeBehavior }));
+  } catch (err) {
+    console.error('Could not save window close behavior:', err.message);
+    res.status(500).json({ error: 'Konnte nicht gespeichert werden' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+// The presence of one single overlay, for the header on its own settings
+// page. Same describeOverlayPresence() the diagnostics route uses — a
+// settings page has no business pulling the whole diagnostics payload
+// (Twitch, music, update state) every few seconds just to learn whether its
+// own Browser Source is connected.
+app.get('/api/overlay-status/:role', (req, res) => {
+  if (!overlayPresence.has(req.params.role)) {
+    res.status(404).json({ error: 'Unbekanntes Overlay' });
+    return;
+  }
+  res.json(describeOverlayPresence(req.params.role));
 });
 
 // --- Diagnostics ------------------------------------------------------------
@@ -1008,11 +1123,137 @@ app.get('/api/twitch/chatters', async (req, res) => {
   }
 });
 
-// --- YTMDesktop (Now Playing) ------------------------------------------------
+// --- Music sources (YTMDesktop / Spotify) ------------------------------------
+
+// Two sources, one active at a time. Both fill state.music in the exact same
+// shape, so overlay-music.html knows nothing about where a track came from —
+// switching source changes which module is running, nothing else.
+//
+// Kept side by side rather than replacing YTMDesktop: an existing pairing
+// keeps working, and neither source is obviously the right one for everybody.
+const MUSIC_SOURCES = new Set(['ytmdesktop', 'spotify']);
+const MUSIC_SOURCE_FILE = path.join(DATA_DIR, 'music-source.json');
+
+function loadMusicSource() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(MUSIC_SOURCE_FILE, 'utf8'));
+    return MUSIC_SOURCES.has(saved.source) ? saved.source : 'ytmdesktop';
+  } catch {
+    return 'ytmdesktop';
+  }
+}
+
+function saveMusicSource() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(MUSIC_SOURCE_FILE, JSON.stringify({ source: musicSource }));
+  } catch (err) {
+    console.error('Could not save music source:', err.message);
+  }
+}
+
+let musicSource = loadMusicSource();
+
+// Stops whichever source was running and starts the selected one. Clearing
+// the status in between matters: otherwise the card would keep showing the
+// last track of the source that was just switched away from.
+function applyMusicSource() {
+  if (musicSource === 'spotify') {
+    music.stop();
+    spotify.start();
+  } else {
+    spotify.stop();
+    if (musicTokenStore.load()) music.start();
+  }
+}
+
+function musicStatusPayload() {
+  return {
+    source: musicSource,
+    spotifyAvailable: spotifyConfig.hasClientId,
+    ytmdesktop: { paired: Boolean(musicTokenStore.load()), connected: music.isConnected() },
+    spotify: { paired: spotify.isPaired(), connected: spotify.isConnected() },
+    // The active source, flattened — what the settings page and the
+    // diagnostics route already read.
+    paired: musicSource === 'spotify' ? spotify.isPaired() : Boolean(musicTokenStore.load()),
+    connected: musicSource === 'spotify' ? spotify.isConnected() : music.isConnected(),
+  };
+}
 
 app.get('/api/music/status', (req, res) => {
-  res.json({ paired: Boolean(musicTokenStore.load()), connected: music.isConnected() });
+  res.json(musicStatusPayload());
 });
+
+app.post('/api/music/source', (req, res) => {
+  if (!MUSIC_SOURCES.has(req.body.source)) {
+    res.status(400).json({ error: 'Unbekannte Musikquelle' });
+    return;
+  }
+  if (req.body.source === 'spotify' && !spotifyConfig.hasClientId) {
+    res.status(409).json({ error: 'Für Spotify ist keine Client-ID konfiguriert' });
+    return;
+  }
+
+  musicSource = req.body.source;
+  saveMusicSource();
+  applyMusicStatus({ ...state.music, connected: false, title: null });
+  applyMusicSource();
+  res.json({ ok: true, source: musicSource });
+});
+
+// --- Spotify ------------------------------------------------------------------
+
+// The browser only ever asks for the URL; opening it is the tray app's job
+// (shell.openExternal), exactly like the Twitch device flow. A page inside
+// SYNSA must not navigate itself to Spotify — the callback has to come back
+// to this loopback server, not into the app window.
+app.get('/api/spotify/authorize-url', (req, res) => {
+  if (!spotifyConfig.hasClientId) {
+    res.status(409).json({ error: 'Für Spotify ist keine Client-ID konfiguriert' });
+    return;
+  }
+  res.json({ url: spotifyAuth.buildAuthorizeUrl() });
+});
+
+// Where Spotify sends the browser back to. Registered in the Spotify
+// dashboard as http://127.0.0.1:<port>/spotify/callback — "localhost" is
+// rejected there, loopback IP literals are not.
+app.get('/spotify/callback', async (req, res) => {
+  if (req.query.error) {
+    spotifyAuth.cancel();
+    res.status(400).send(`Spotify-Anmeldung abgebrochen: ${req.query.error}`);
+    return;
+  }
+
+  try {
+    await spotifyAuth.exchangeCode(String(req.query.code || ''), String(req.query.state || ''));
+    musicSource = 'spotify';
+    saveMusicSource();
+    applyMusicSource();
+    broadcast({ kind: 'music-source', status: musicStatusPayload() });
+    // A plain confirmation page, not a redirect into SYNSA's own UI: this
+    // runs in the *system* browser, and opening a second copy of the app
+    // there would be more confusing than helpful. The settings page inside
+    // SYNSA has already updated itself via the broadcast above.
+    res.type('html').send(
+      '<!doctype html><meta charset="utf-8"><title>SYNSA</title>' +
+        '<body style="font-family:system-ui,sans-serif;background:#0b0d0d;color:#F1F5F3;padding:48px;">' +
+        '<h1 style="font-size:20px;">Spotify ist verbunden.</h1>' +
+        '<p style="color:#9fb0ab;">Du kannst dieses Fenster schließen und zu SYNSA zurückkehren.</p>'
+    );
+  } catch (err) {
+    console.error('Spotify authorization failed:', err.message);
+    res.status(500).send('Spotify-Anmeldung fehlgeschlagen. Du kannst das Fenster schließen und es erneut versuchen.');
+  }
+});
+
+app.post('/api/spotify/disconnect', (req, res) => {
+  spotify.stop();
+  spotifyTokenStore.clear();
+  res.json({ ok: true });
+});
+
+// --- YTMDesktop ---------------------------------------------------------------
 
 app.post('/api/music/pair', async (req, res) => {
   try {
@@ -1115,11 +1356,18 @@ app.post('/api/countdown/start', (req, res) => {
     return;
   }
 
-  // Falling back on empty matters: reloading the settings page mid-run
-  // leaves the label field blank (the form only pre-fills while stopped),
-  // so a plain "is it a string" check would wipe the label on restart.
-  const trimmedLabel = typeof req.body.label === 'string' ? req.body.label.trim().slice(0, 60) : '';
-  const label = trimmedLabel || state.countdown.label;
+  // An empty label is a value, not a missing one: clearing the field and
+  // pressing Start is how you ask for a countdown with no caption.
+  //
+  // This used to fall back to the stored label, because reloading the
+  // settings page mid-run left the field blank and Start would then have
+  // wiped it. That reason is gone: countdown-settings.js's applyCountdown()
+  // mirrors the server's label into the field on every status it receives,
+  // running or not, so a blank field now only ever means the user blanked it.
+  //
+  // A request that omits the field entirely still keeps the stored label —
+  // that is a malformed call, not somebody clearing a field.
+  const label = typeof req.body.label === 'string' ? req.body.label.trim().slice(0, 60) : state.countdown.label;
   const accentColor = HEX_COLOR_RE.test(req.body.accentColor) ? req.body.accentColor : state.countdown.accentColor;
   const fontSize = COUNTDOWN_FONT_SIZES.has(req.body.fontSize) ? req.body.fontSize : state.countdown.fontSize;
 
@@ -1288,12 +1536,10 @@ const ready = (async () => {
     }
   }
 
-  if (musicTokenStore.load()) {
-    try {
-      music.start();
-    } catch (err) {
-      console.error('Could not start YTMDesktop connection on boot:', err.message);
-    }
+  try {
+    applyMusicSource();
+  } catch (err) {
+    console.error('Could not start the music source on boot:', err.message);
   }
 })();
 

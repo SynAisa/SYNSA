@@ -13,9 +13,108 @@
   const accentColorInput = document.getElementById('music-accent-color');
   const accentColorHexInput = document.getElementById('music-accent-color-hex');
 
+  // --- Source selection (YTMDesktop / Spotify) ---------------------------
+
+  // Both sources fill state.music in the same shape, so everything below
+  // this block — the now-playing card, the display options, the overlay —
+  // is unaware of which one is active. Only which connection card is shown
+  // and which connect button does what depends on it.
+  const sourceSelect = document.getElementById('music-source-select');
+  const sourceNote = document.getElementById('music-source-note');
+  const ytmCard = document.getElementById('music-ytm-card');
+  const spotifyCard = document.getElementById('music-spotify-card');
+  const spotifyStatusText = document.getElementById('spotify-status-text');
+  const spotifyConnectBtn = document.getElementById('spotify-connect-btn');
+  const spotifyDisconnectBtn = document.getElementById('spotify-disconnect-btn');
+  const spotifyNote = document.getElementById('spotify-note');
+
+  function applySourceStatus(status) {
+    if (!status) return;
+
+    sourceSelect.value = status.source;
+    ytmCard.hidden = status.source !== 'ytmdesktop';
+    spotifyCard.hidden = status.source !== 'spotify';
+
+    // No client ID configured means the Spotify flow cannot even start, so
+    // say that rather than offering a button that only produces an error.
+    const spotifyOption = [...sourceSelect.options].find((o) => o.value === 'spotify');
+    spotifyOption.disabled = !status.spotifyAvailable;
+    if (!status.spotifyAvailable) {
+      sourceNote.textContent = t(
+        'Für Spotify ist in dieser SYNSA-Installation keine Client-ID hinterlegt — bis dahin steht nur YTMDesktop zur Verfügung.'
+      );
+    }
+
+    const spotify = status.spotify || {};
+    spotifyConnectBtn.hidden = spotify.paired;
+    spotifyDisconnectBtn.hidden = !spotify.paired;
+    if (spotify.connected) {
+      spotifyStatusText.textContent = t('Verbunden');
+      spotifyStatusText.classList.add('is-connected');
+    } else {
+      spotifyStatusText.textContent = spotify.paired ? t('Verknüpft, wartet auf Wiedergabe') : t('Nicht verbunden');
+      spotifyStatusText.classList.remove('is-connected');
+    }
+  }
+
+  async function loadSourceStatus() {
+    try {
+      const res = await fetch('/api/music/status');
+      if (res.ok) applySourceStatus(await res.json());
+    } catch {
+      // The next status change or page load catches up.
+    }
+  }
+
+  sourceSelect.addEventListener('change', async () => {
+    sourceSelect.disabled = true;
+    try {
+      const res = await fetch('/api/music/source', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: sourceSelect.value }),
+      });
+      if (!res.ok) window.SynsaUI.showToast(t('Musikquelle konnte nicht gewechselt werden.'));
+    } catch {
+      window.SynsaUI.showToast(t('Musikquelle konnte nicht gewechselt werden.'));
+    }
+    sourceSelect.disabled = false;
+    loadSourceStatus();
+  });
+
+  spotifyConnectBtn.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/spotify/authorize-url');
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        window.SynsaUI.showToast(t('Spotify-Anmeldung konnte nicht gestartet werden.'));
+        return;
+      }
+      // Opens in the system browser: electron/main.js routes any navigation
+      // away from SYNSA through shell.openExternal, and the callback has to
+      // come back to the loopback server, not into the app window.
+      window.open(data.url, '_blank');
+      spotifyNote.textContent = t('Bestätige die Verbindung im Browser. Danach kannst du hierher zurückkehren.');
+    } catch {
+      window.SynsaUI.showToast(t('Spotify-Anmeldung konnte nicht gestartet werden.'));
+    }
+  });
+
+  spotifyDisconnectBtn.addEventListener('click', async () => {
+    await fetch('/api/spotify/disconnect', { method: 'POST' }).catch(() => {});
+    loadSourceStatus();
+  });
+
+  loadSourceStatus();
+  // The connection state of a source changes without a broadcast of its own
+  // (a Spotify token expiring, YTMDesktop being closed), so this mirrors the
+  // polling the overlay settings header already does.
+  setInterval(loadSourceStatus, 5000);
+
   function handleMessage(msg) {
     if (msg.kind === 'state' && msg.state && msg.state.music) applyMusicStatus(msg.state.music);
     if (msg.kind === 'music-status') applyMusicStatus(msg.status);
+    if (msg.kind === 'music-source') applySourceStatus(msg.status);
     if (msg.kind === 'state' && msg.state && msg.state.musicSettings) applySettings(msg.state.musicSettings);
     if (msg.kind === 'music-settings') applySettings(msg.settings);
   }

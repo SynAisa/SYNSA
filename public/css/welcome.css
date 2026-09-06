@@ -201,6 +201,41 @@ body {
 
 /* --- Footer --- */
 
+/* Privacy note above the footer. Same quiet card language as the status card
+   and the changelog box — this is meant to be read once and reassure, not to
+   shout. */
+.welcome-privacy {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: rgba(22, 25, 25, 0.6);
+}
+
+.welcome-privacy-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.welcome-privacy p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.welcome-privacy p:last-child {
+  margin-bottom: 0;
+}
+
+.welcome-privacy strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .welcome-footer {
   display: flex;
   align-items: center;

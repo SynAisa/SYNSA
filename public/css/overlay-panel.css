@@ -1,0 +1,184 @@
+/* Header and preview blocks shared by the three overlay settings pages
+   (shared/overlay-panel.js). Card language and colours come from
+   control.css/theme.css — nothing new here but the URL row and the 16:9
+   preview frame. */
+
+.overlay-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.overlay-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--highlight), var(--accent));
+}
+
+.overlay-header-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.overlay-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.overlay-url-input {
+  flex: 1;
+  min-width: 220px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.overlay-url-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.overlay-url-copy {
+  flex: none;
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.overlay-url-copy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.overlay-url-copy.is-copied {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Muted until the Browser Source is actually there — "connected" is the
+   state worth colouring, not its absence. */
+.overlay-status-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.overlay-status-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.overlay-status-chip.is-connected {
+  color: var(--accent);
+  border-color: rgba(53, 201, 168, 0.45);
+}
+
+.overlay-status-chip.is-connected::before {
+  background: var(--accent);
+}
+
+.overlay-header-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.overlay-header-note:empty {
+  display: none;
+}
+
+.overlay-preview {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.overlay-preview::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--highlight), var(--accent));
+}
+
+.overlay-preview-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* 16:9, like an OBS canvas — a preview at the settings page's own
+   proportions would misrepresent where things sit on the stream. The dark
+   fill stands in for the video underneath; overlays are transparent. */
+.overlay-preview-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0b0d0d;
+}
+
+.overlay-preview-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.overlay-preview-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}

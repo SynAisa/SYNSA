@@ -45,6 +45,78 @@ window.SynsaTranslationsEn = {
   'Aktualisierung wird abgeschlossen. SYNSA wird gleich neu gestartet.':
     'Finishing the update. SYNSA will restart in a moment.',
 
+  // Musikquelle / Spotify
+  'Zeigt den gerade laufenden Song als Overlay in OBS. Als Quelle dient wahlweise die':
+    'Shows the currently playing song as an overlay in OBS. The source is either',
+  '(YTMDesktop, mit aktiviertem Companion Server unter Einstellungen → Integrationen) oder':
+    '(YTMDesktop, with its Companion Server enabled under Settings → Integrations) or',
+  Musikquelle: 'Music source',
+  'Woher kommt der aktuelle Song': 'Where the current song comes from',
+  'Es ist immer nur eine Quelle aktiv. Das Overlay bleibt dasselbe.':
+    'Only one source is active at a time. The overlay stays the same.',
+  'YTMDesktop-Verbindung': 'YTMDesktop connection',
+  'Spotify-Verbindung': 'Spotify connection',
+  'Mit Spotify verbinden': 'Connect with Spotify',
+  'Die Bestätigung läuft im Browser auf spotify.com. Dein Passwort gibst du nie in SYNSA ein.':
+    'You confirm the connection in your browser on spotify.com. You never type your password into SYNSA.',
+  'Bestätige die Verbindung im Browser. Danach kannst du hierher zurückkehren.':
+    'Confirm the connection in your browser, then come back here.',
+  'Verknüpft, wartet auf Wiedergabe': 'Linked, waiting for playback',
+  'Für Spotify ist in dieser SYNSA-Installation keine Client-ID hinterlegt — bis dahin steht nur YTMDesktop zur Verfügung.':
+    'This SYNSA installation has no Spotify client ID configured — until it does, only YTMDesktop is available.',
+  'Musikquelle konnte nicht gewechselt werden.': 'Could not switch the music source.',
+  'Spotify-Anmeldung konnte nicht gestartet werden.': 'Could not start the Spotify sign-in.',
+
+  // Fenster-Einstellung (Schließen-Verhalten)
+  Fenster: 'Window',
+  'Beim Klick auf das X': 'When you click the X',
+  'Jedes Mal fragen': 'Ask every time',
+  'In den Tray minimieren': 'Minimise to the tray',
+  'SYNSA beenden': 'Quit SYNSA',
+  'Im Tray läuft SYNSA weiter — Alerts, Chat und die Overlays in OBS bleiben aktiv.':
+    'In the tray SYNSA keeps running — alerts, chat and the overlays in OBS stay active.',
+
+  // Overlay-Kopfbereich + eingebettete Vorschau
+  // ("Kopieren", "Kopiert", "Vorschau", "Nicht verbunden" und
+  // "Zuletzt gesehen" stehen bereits weiter unten in dieser Tabelle.)
+  'Overlay-URL für OBS': 'Overlay URL for OBS',
+  'In OBS verbunden': 'Connected in OBS',
+  'In OBS verbunden ({n})': 'Connected in OBS ({n})',
+  'Overlay-Vorschau': 'Overlay preview',
+  'Das ist die echte Overlay-Seite, eingebettet — sie zeigt live denselben Stand wie in OBS.':
+    'This is the real overlay page, embedded — it shows the same live state as OBS does.',
+  Entwurf: 'Draft',
+  'So sieht der Countdown mit den aktuellen Eingaben aus — gestartet wird er erst mit "Starten".':
+    'This is how the countdown looks with the current input — it only starts when you press "Start".',
+
+  // Moderationszeilen im Chat
+  '{name} wurde gebannt.': '{name} was banned.',
+  '{name} wurde für {d} stumm geschaltet.': '{name} was timed out for {d}.',
+  '1 Sekunde': '1 second',
+  '{n} Sekunden': '{n} seconds',
+  '1 Minute': '1 minute',
+  '{n} Minuten': '{n} minutes',
+  '1 Stunde': '1 hour',
+  '{n} Stunden': '{n} hours',
+
+  // Countdown-Rückmeldung ("Gespeichert" steht bereits weiter unten)
+  'Speichern fehlgeschlagen.': 'Could not save.',
+  'Bitte eine Dauer über 0 eingeben.': 'Please enter a duration above 0.',
+  'Countdown konnte nicht gestoppt werden.': 'Could not stop the countdown.',
+
+  // Chatter-Liste
+  'Twitch liefert diese Liste mit Verzögerung — neue Chatter tauchen oft erst nach ein paar Minuten auf.':
+    'Twitch delivers this list with a delay — new chatters often only show up after a few minutes.',
+
+  // Willkommensseite: Datenschutz
+  'Deine Daten bleiben bei dir': 'Your data stays with you',
+  'SYNSA läuft vollständig auf deinem eigenen Rechner. Es gibt keinen Server des Entwicklers dazwischen: Das Programm spricht direkt mit Twitch und — falls du das Musik-Overlay nutzt — mit der YouTube-Music-App auf diesem PC.':
+    'SYNSA runs entirely on your own computer. There is no developer server in between: the app talks directly to Twitch and — if you use the music overlay — to the YouTube Music app on this PC.',
+  'Niemand hat Zugriff auf deine Anmeldedaten — auch der Entwickler von SYNSA nicht. Deine Twitch-Zugangsdaten, deine Chat-Inhalte und dein Alert-Verlauf verlassen diesen Rechner nicht.':
+    'Nobody has access to your login details — not even the developer of SYNSA. Your Twitch credentials, your chat contents and your alert history never leave this computer.',
+  'Beim Verknüpfen gibst du dein Passwort nie in SYNSA ein: Du bestätigst die Verbindung direkt bei Twitch. Der Zugangsschlüssel, den Twitch danach ausstellt, wird verschlüsselt auf dieser Festplatte abgelegt (über Electrons safeStorage) und nur benutzt, um Alerts, Chat und Stream-Infos zu holen. Du kannst die Verbindung jederzeit in den Einstellungen wieder trennen.':
+    'You never type your password into SYNSA: you confirm the connection with Twitch directly. The access key Twitch issues afterwards is stored encrypted on this drive (using Electron safeStorage) and is only used to fetch alerts, chat and stream info. You can disconnect again at any time in the settings.',
+
   // Ziel
   Ziel: 'Goal',
   'Ein Stream-Ziel, das SYNSA aus den eigenen Alerts zählt — unabhängig von Twitchs Creator Goals, deshalb sind auch Bits und Gift-Subs möglich. Die Zählung startet automatisch neu, sobald der Stream live geht.':

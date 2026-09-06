@@ -49,7 +49,10 @@
     root.style.setProperty('--accent', accent);
     root.style.setProperty('--accent-glow', glowFrom(accent));
 
+    // An empty label means no caption at all — hidden rather than left as an
+    // empty element, which would still take the flex gap above the digits.
     labelEl.textContent = status.label || '';
+    labelEl.hidden = !status.label;
 
     const render = () => {
       const remaining = (status.endsAt - Date.now()) / 1000;
@@ -81,7 +84,12 @@
       retryDelay = 1500;
       // Same as overlay-music.js: purely so the server knows this Browser
       // Source exists, for the diagnostics page. No behaviour depends on it.
-      ws.send(JSON.stringify({ kind: 'register', role: 'overlay-countdown' }));
+      // The embedded preview on the settings page loads this same URL with
+      // ?preview=1. It must not count as a Browser Source in OBS, or the
+      // connection status on that very page would always read "connected".
+      if (!new URLSearchParams(location.search).has('preview')) {
+        ws.send(JSON.stringify({ kind: 'register', role: 'overlay-countdown' }));
+      }
     });
 
     ws.addEventListener('message', (event) => {

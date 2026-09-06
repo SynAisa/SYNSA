@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/css/theme.css">
 <link rel="stylesheet" href="/css/control.css">
 <link rel="stylesheet" href="/css/nav.css">
+<link rel="stylesheet" href="/css/overlay-panel.css">
 <link rel="stylesheet" href="/css/goal.css">
 </head>
 <body>
@@ -21,6 +22,8 @@
       </div>
       <div id="status" class="status">Verbinde…</div>
     </header>
+
+    <div id="overlay-header" data-role="goal" data-path="/overlay-goal.html"></div>
 
     <p class="hint">
       Ein Stream-Ziel, das SYNSA aus den eigenen Alerts zählt — unabhängig von
@@ -77,25 +80,15 @@
       <p class="goal-since" id="goal-since"></p>
     </div>
 
-    <div class="card">
-      <div class="card-title">Overlay-URL</div>
-      <p class="hint" style="margin-bottom: 0;">
-        Als OBS Browser Source:
-        <span class="reveal-copy" data-reveal-copy data-value="http://localhost:4242/overlay-goal.html">
-          <code class="reveal-copy-value"></code>
-          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
-          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
-        </span>
-      </p>
-    </div>
+    <div id="overlay-preview"></div>
   </div>
 
   <script src="/i18n/en.js"></script>
   <script src="/shared/i18n.js"></script>
   <script src="/shared/ui.js"></script>
   <script src="/shared/module-menu.js"></script>
-  <script src="/shared/reveal-copy.js"></script>
   <script src="/shared/page-socket.js"></script>
+  <script src="/shared/overlay-panel.js"></script>
   <script src="/js/goal-settings.js"></script>
 </body>
 </html>

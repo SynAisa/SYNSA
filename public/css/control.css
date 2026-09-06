@@ -235,6 +235,21 @@ h1 {
   width: 70px;
 }
 
+/* No stepper arrows on the duration fields — nobody clicks their way to
+   "12 minutes", and the arrows only steal width from the number. The type
+   stays number, so min/max and the numeric keyboard are unaffected; only the
+   arrows go. */
+.countdown-duration-row input::-webkit-outer-spin-button,
+.countdown-duration-row input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.countdown-duration-row input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .countdown-duration-row span {
   font-size: 12px;
   color: var(--text-muted);
@@ -478,6 +493,13 @@ h1 {
   background: linear-gradient(180deg, var(--highlight), var(--accent));
 }
 
+/* .card sets display:flex, which beats the browser default for [hidden]
+   — the same trap the module menu flyout already needed covering. Without
+   this a hidden card stays on screen. */
+.card[hidden] {
+  display: none;
+}
+
 .card-title {
   font-size: 11px;
   font-weight: 600;
@@ -588,3 +610,11 @@ button:active {
   transform: scale(0.98);
 }
 
+
+/* Sits under the countdown "Entwurf" box, telling it apart from the embedded
+   overlay preview further down (shared/overlay-panel.js). */
+.countdown-draft-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}

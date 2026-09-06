@@ -414,6 +414,19 @@ h1 {
   border-color: var(--accent);
 }
 
+.chatters-note {
+  flex: none;
+  margin: 0 8px 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  /* The panel hangs inside .panel-title, which is uppercase with wide
+     letter-spacing — fine for a two-word heading, unreadable for a whole
+     sentence. */
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .chatters-list {
   flex: 1;
   overflow-y: auto;
@@ -546,6 +559,15 @@ h1 {
   opacity: 0.7;
 }
 
+/* A confirmed moderation action. Same row and same timestamp as any other
+   line so it sits in the timeline properly, but smaller, muted and italic —
+   it should read as the log noting something, not as somebody talking. */
+.chat-message--system .chat-system-text {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .chat-username {
   font-weight: 700;
 }
@@ -654,6 +676,11 @@ h1 {
 .toast.is-visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* Confirmations use the accent instead of the default red border. */
+.toast.is-success {
+  border-color: rgba(53, 201, 168, 0.45);
 }
 
 .chat-form {

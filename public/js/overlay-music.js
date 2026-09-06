@@ -233,7 +233,12 @@
       // on it — there is no primary/secondary role for the music overlay —
       // but it is the only way the server can tell whether this overlay is
       // set up in OBS at all, which the diagnostics page reports.
-      ws.send(JSON.stringify({ kind: 'register', role: 'overlay-music' }));
+      // The embedded preview on the settings page loads this same URL with
+      // ?preview=1. It must not count as a Browser Source in OBS, or the
+      // connection status on that very page would always read "connected".
+      if (!new URLSearchParams(location.search).has('preview')) {
+        ws.send(JSON.stringify({ kind: 'register', role: 'overlay-music' }));
+      }
     });
 
     ws.addEventListener('message', (event) => {
