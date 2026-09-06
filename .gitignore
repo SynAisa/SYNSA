@@ -25,6 +25,9 @@ dist/
 # against a stray one ending up here.
 *.log
 
+# Working notes and drafts written alongside the project, not part of it.
+Claude outputs/
+
 # Common OS-generated clutter.
 .DS_Store
 Thumbs.db
