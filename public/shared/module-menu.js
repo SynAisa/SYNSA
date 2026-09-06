@@ -36,21 +36,33 @@
     },
   ];
 
-  const SETTINGS_MODULE = {
-    label: 'Einstellungen',
-    href: '/settings.html',
-    icon: GEAR_ICON,
-  };
+  // Below the separator, apart from the modules: these two are about SYNSA
+  // itself rather than a thing you stream with.
+  const FOOTER_MODULES = [
+    {
+      label: 'Einstellungen',
+      href: '/settings.html',
+      icon: GEAR_ICON,
+    },
+    {
+      label: 'Über SYNSA',
+      href: '/about.html',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.75v.5"/></svg>',
+    },
+  ];
 
   const root = document.getElementById('module-menu-root');
   if (!root) return;
 
   const currentPath = location.pathname;
 
-  const itemsHtml = MODULES.map((m) => {
-    const active = m.href === currentPath ? ' is-active' : '';
-    return `<a href="${m.href}" class="module-menu-item${active}">${m.icon}<span>${m.label}</span></a>`;
-  }).join('');
+  const renderItems = (entries) =>
+    entries
+      .map((m) => {
+        const active = m.href === currentPath ? ' is-active' : '';
+        return `<a href="${m.href}" class="module-menu-item${active}">${m.icon}<span>${m.label}</span></a>`;
+      })
+      .join('');
 
   root.innerHTML = `
     <div class="nav-controls">
@@ -59,14 +71,19 @@
       <div class="module-menu">
         <button type="button" class="module-menu-btn" id="module-menu-btn" title="Module" aria-label="Module">${GEAR_ICON}</button>
         <div class="module-menu-flyout" id="module-menu-flyout" hidden>
-          ${itemsHtml}
+          ${renderItems(MODULES)}
           <div class="module-menu-separator"></div>
-          <a href="${SETTINGS_MODULE.href}" class="module-menu-item${SETTINGS_MODULE.href === currentPath ? ' is-active' : ''}">${SETTINGS_MODULE.icon}<span>${SETTINGS_MODULE.label}</span></a>
+          ${renderItems(FOOTER_MODULES)}
           <div class="module-menu-version" id="module-menu-version"></div>
         </div>
       </div>
     </div>
   `;
+
+  // This markup is built after shared/i18n.js has already walked the page, so
+  // it translates its own subtree rather than staying German in an otherwise
+  // English window.
+  window.SynsaI18n.translateTree(root);
 
   // Every page is a plain server-rendered navigation (a normal <a href>, or
   // the tray's loadURL()) — both feed the browser's own history stack, so
@@ -92,51 +109,23 @@
       // Not critical — the menu still works without the version line.
     });
 
-  // `.is-visible` (not `hidden`) is the source of truth for "is this open"
-  // — hidden only gates DOM removal, and lags behind by FLYOUT_MS so the
-  // fade-out has time to play instead of the menu just vanishing.
-  const FLYOUT_MS = 140;
-  let closeTimer = null;
-
-  function isOpen() {
-    return flyout.classList.contains('is-visible');
-  }
-
-  function open() {
-    clearTimeout(closeTimer);
-    flyout.hidden = false;
-    requestAnimationFrame(() => flyout.classList.add('is-visible'));
-  }
-
-  function close() {
-    // If open() never got a paint (e.g. the window was backgrounded right as
-    // it was clicked, stalling the rAF that adds 'is-visible'), returning
-    // here without touching `hidden` would leave the menu stuck open —
-    // invisible but still blocking clicks — forever. Closing it for real is
-    // always safe, animated or not.
-    if (!isOpen()) {
-      flyout.hidden = true;
-      return;
-    }
-    flyout.classList.remove('is-visible');
-    closeTimer = setTimeout(() => {
-      flyout.hidden = true;
-    }, FLYOUT_MS);
-  }
+  // The open/close fade is shared with the dashboard's popovers and lives in
+  // shared/ui.js.
+  const { isPanelOpen, openPanel, closePanel } = window.SynsaUI;
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (isOpen()) close();
-    else open();
+    if (isPanelOpen(flyout)) closePanel(flyout);
+    else openPanel(flyout);
   });
 
   document.addEventListener('click', (e) => {
-    if (isOpen() && !e.target.closest('.module-menu')) close();
+    if (isPanelOpen(flyout) && !e.target.closest('.module-menu')) closePanel(flyout);
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isOpen()) {
-      close();
+    if (e.key === 'Escape' && isPanelOpen(flyout)) {
+      closePanel(flyout);
       btn.focus();
     }
   });

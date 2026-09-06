@@ -1,5 +1,4 @@
 (function () {
-  const statusEl = document.getElementById('status');
   const form = document.getElementById('countdown-form');
   const minutesInput = document.getElementById('countdown-minutes');
   const secondsInput = document.getElementById('countdown-seconds');
@@ -16,37 +15,15 @@
   const previewLabel = document.getElementById('countdown-preview-label');
   const previewValue = document.getElementById('countdown-preview-value');
 
-  let ws;
   let tickTimer = null;
   // While a countdown is actually running, the preview mirrors the real
   // server-driven value (what's genuinely on screen right now) instead of
   // the form fields, which applyCountdown() overwrites anyway once running.
   let runningStatus = null;
 
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}`);
-
-    ws.addEventListener('open', () => setStatus(true));
-    ws.addEventListener('close', () => {
-      setStatus(false);
-      setTimeout(connect, 1500);
-    });
-    ws.addEventListener('error', () => ws.close());
-    ws.addEventListener('message', (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.kind === 'state' && msg.state && msg.state.countdown) applyCountdown(msg.state.countdown);
-        if (msg.kind === 'countdown-status') applyCountdown(msg.status);
-      } catch {
-        // ignore malformed messages
-      }
-    });
-  }
-
-  function setStatus(connected) {
-    statusEl.textContent = connected ? 'Verbunden' : 'Getrennt – versuche erneut…';
-    statusEl.classList.toggle('is-connected', connected);
+  function handleMessage(msg) {
+    if (msg.kind === 'state' && msg.state && msg.state.countdown) applyCountdown(msg.state.countdown);
+    if (msg.kind === 'countdown-status') applyCountdown(msg.status);
   }
 
   function formatDuration(seconds) {
@@ -149,7 +126,8 @@
 
     const tick = () => {
       const remaining = (status.endsAt - Date.now()) / 1000;
-      liveEl.textContent = remaining > 0 ? `Läuft noch: ${formatDuration(remaining)}` : 'Bei 0:00 angekommen';
+      liveEl.textContent =
+        remaining > 0 ? t('Läuft noch: {t}').replace('{t}', formatDuration(remaining)) : t('Bei 0:00 angekommen');
       previewValue.textContent = formatDuration(Math.max(0, remaining));
     };
     tick();
@@ -190,5 +168,5 @@
 
   updatePreviewFromForm();
   loadInitial();
-  connect();
+  connectPageSocket(handleMessage);
 })();

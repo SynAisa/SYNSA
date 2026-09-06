@@ -1,5 +1,4 @@
 (function () {
-  const statusEl = document.getElementById('status');
   const musicStatusText = document.getElementById('music-status-text');
   const connectBtn = document.getElementById('music-connect-btn');
   const disconnectBtn = document.getElementById('music-disconnect-btn');
@@ -14,45 +13,22 @@
   const accentColorInput = document.getElementById('music-accent-color');
   const accentColorHexInput = document.getElementById('music-accent-color-hex');
 
-  let ws;
-
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}`);
-
-    ws.addEventListener('open', () => setStatus(true));
-    ws.addEventListener('close', () => {
-      setStatus(false);
-      setTimeout(connect, 1500);
-    });
-    ws.addEventListener('error', () => ws.close());
-    ws.addEventListener('message', (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.kind === 'state' && msg.state && msg.state.music) applyMusicStatus(msg.state.music);
-        if (msg.kind === 'music-status') applyMusicStatus(msg.status);
-        if (msg.kind === 'state' && msg.state && msg.state.musicSettings) applySettings(msg.state.musicSettings);
-        if (msg.kind === 'music-settings') applySettings(msg.settings);
-      } catch {
-        // ignore malformed messages
-      }
-    });
-  }
-
-  function setStatus(connected) {
-    statusEl.textContent = connected ? 'Verbunden' : 'Getrennt – versuche erneut…';
-    statusEl.classList.toggle('is-connected', connected);
+  function handleMessage(msg) {
+    if (msg.kind === 'state' && msg.state && msg.state.music) applyMusicStatus(msg.state.music);
+    if (msg.kind === 'music-status') applyMusicStatus(msg.status);
+    if (msg.kind === 'state' && msg.state && msg.state.musicSettings) applySettings(msg.state.musicSettings);
+    if (msg.kind === 'music-settings') applySettings(msg.settings);
   }
 
   function applyMusicStatus(status) {
     if (!status) return;
     if (status.connected) {
-      musicStatusText.textContent = 'Verbunden';
+      musicStatusText.textContent = t('Verbunden');
       musicStatusText.classList.add('is-connected');
       connectBtn.hidden = true;
       disconnectBtn.hidden = false;
     } else {
-      musicStatusText.textContent = 'Nicht verbunden';
+      musicStatusText.textContent = t('Nicht verbunden');
       musicStatusText.classList.remove('is-connected');
       connectBtn.hidden = false;
       disconnectBtn.hidden = true;
@@ -144,17 +120,17 @@
   connectBtn.addEventListener('click', async () => {
     connectBtn.disabled = true;
     pairNote.hidden = false;
-    pairNote.textContent = 'Bitte in YTMDesktop die Verbindungsanfrage bestätigen (bis zu 30 Sekunden)…';
+    pairNote.textContent = t('Bitte in YTMDesktop die Verbindungsanfrage bestätigen (bis zu 30 Sekunden)…');
     try {
       const res = await fetch('/api/music/pair', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Pairing fehlgeschlagen');
-      pairNote.textContent = 'Verbunden!';
+      if (!res.ok) throw new Error(t(data.error || 'Pairing fehlgeschlagen'));
+      pairNote.textContent = t('Verbunden!');
       setTimeout(() => {
         pairNote.hidden = true;
       }, 2000);
     } catch (err) {
-      pairNote.textContent = `Fehler: ${err.message}`;
+      pairNote.textContent = t('Fehler: {msg}').replace('{msg}', err.message);
     } finally {
       connectBtn.disabled = false;
     }
@@ -172,5 +148,5 @@
 
   refreshStatus();
   loadSettings();
-  connect();
+  connectPageSocket(handleMessage);
 })();

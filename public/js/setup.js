@@ -37,8 +37,8 @@
   function renderConnected() {
     stopPolling();
     dot.dataset.state = 'connected';
-    title.textContent = 'Twitch-Konto verbunden';
-    subtitle.textContent = 'SYNSA kann jetzt Alerts, Chat und Streaminfos verwenden.';
+    title.textContent = t('Twitch-Konto verbunden');
+    subtitle.textContent = t('SYNSA kann jetzt Alerts, Chat und Streaminfos verwenden.');
     deviceStep.hidden = true;
     connectBtn.hidden = true;
     continueLink.hidden = false;
@@ -47,12 +47,12 @@
 
   function renderWaiting(state) {
     dot.dataset.state = 'waiting';
-    title.textContent = 'Warte auf deine Bestätigung';
-    subtitle.textContent = 'Der Code gilt nur für kurze Zeit.';
+    title.textContent = t('Warte auf deine Bestätigung');
+    subtitle.textContent = t('Der Code gilt nur für kurze Zeit.');
     deviceStep.hidden = false;
     deviceCode.textContent = state.userCode || '––––––';
     if (state.verificationUri) deviceOpen.href = state.verificationUri;
-    deviceHint.textContent = 'SYNSA wartet auf deine Bestätigung …';
+    deviceHint.textContent = t('SYNSA wartet auf deine Bestätigung …');
     connectBtn.hidden = true;
     continueLink.hidden = true;
     showError('');
@@ -61,12 +61,12 @@
   function renderIdle(message) {
     stopPolling();
     dot.dataset.state = 'idle';
-    title.textContent = 'Noch nicht verbunden';
-    subtitle.textContent = 'Ein Klick, dann bestätigst du bei Twitch.';
+    title.textContent = t('Noch nicht verbunden');
+    subtitle.textContent = t('Ein Klick, dann bestätigst du bei Twitch.');
     deviceStep.hidden = true;
     connectBtn.hidden = false;
     connectBtn.disabled = false;
-    connectBtn.textContent = message ? 'Erneut versuchen' : 'Mit Twitch verbinden';
+    connectBtn.textContent = t(message ? 'Erneut versuchen' : 'Mit Twitch verbinden');
     continueLink.hidden = true;
     showError(message || '');
   }
@@ -74,12 +74,12 @@
   function renderMissingClientId() {
     stopPolling();
     dot.dataset.state = 'error';
-    title.textContent = 'Verbindung nicht möglich';
-    subtitle.textContent = 'Dieser SYNSA-Version fehlt die Twitch-Client-ID.';
+    title.textContent = t('Verbindung nicht möglich');
+    subtitle.textContent = t('Dieser SYNSA-Version fehlt die Twitch-Client-ID.');
     deviceStep.hidden = true;
     connectBtn.hidden = true;
     continueLink.hidden = true;
-    showError('Bitte eine vollständige SYNSA-Version installieren.');
+    showError(t('Bitte eine vollständige SYNSA-Version installieren.'));
   }
 
   function render(state) {
@@ -99,7 +99,7 @@
       return;
     }
     if (state.status === 'error') {
-      renderIdle(state.error || 'Die Verbindung ist fehlgeschlagen.');
+      renderIdle(t(state.error || 'Die Verbindung ist fehlgeschlagen.'));
       return;
     }
     renderIdle('');
@@ -123,7 +123,7 @@
 
   connectBtn.addEventListener('click', async () => {
     connectBtn.disabled = true;
-    connectBtn.textContent = 'Wird vorbereitet …';
+    connectBtn.textContent = t('Wird vorbereitet …');
     showError('');
 
     try {
@@ -132,7 +132,7 @@
       render(state);
       if (state.status === 'waiting') startPolling();
     } catch {
-      renderIdle('Twitch ist gerade nicht erreichbar.');
+      renderIdle(t('Twitch ist gerade nicht erreichbar.'));
     }
   });
 

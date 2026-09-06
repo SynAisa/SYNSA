@@ -1,0 +1,87 @@
+/* The changelog list, shared by the welcome screen and the "Über SYNSA"
+   section in the settings. Only the box and its entries live here — where
+   the box sits on the page, and how tall it may get, stays with each page
+   (the welcome screen gives it the remaining height, the settings page a
+   fixed maximum). Expects --bg-card, --border, --accent and --text-muted
+   from the page that includes it. */
+
+.changelog-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.changelog-box {
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.changelog-box::-webkit-scrollbar {
+  width: 9px;
+}
+
+.changelog-box::-webkit-scrollbar-thumb {
+  background: rgba(53, 201, 168, 0.28);
+  border-radius: 4px;
+}
+
+.changelog-entry + .changelog-entry {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.changelog-entry-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-bottom: 7px;
+}
+
+.changelog-entry-version {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.changelog-entry-current {
+  font-size: 10px;
+  font-weight: 600;
+  color: #08100e;
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.changelog-entry-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.changelog-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.changelog-list li {
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(241, 245, 243, 0.85);
+}
+
+.changelog-list li + li {
+  margin-top: 5px;
+}
+
+.changelog-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}

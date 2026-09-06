@@ -1,15 +1,7 @@
 /* Welcome screen — shown on a fresh installation and again on the first
    start after an update (see electron/main.js). It is a normal page in the
    normal app window, so it centres a readable column instead of filling the
-   full width the way the dashboard does. Brand tokens come from theme.css;
-   --border and --bg-card are kept byte-for-byte identical to control.css on
-   purpose (see the note in theme.css about why those two are per page). */
-:root {
-  --bg-page: #0b0d0d;
-  --bg-card: rgba(22, 25, 25, 0.9);
-  --border: rgba(53, 201, 168, 0.25);
-  --text-muted: rgba(241, 245, 243, 0.62);
-}
+   full width the way the dashboard does. All colours come from theme.css. */
 
 * {
   box-sizing: border-box;
@@ -191,7 +183,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Changelog --- */
+/* --- Changelog ---
+   The list itself is styled in css/changelog.css, shared with the "Über
+   SYNSA" section in the settings. Only its place on this page is here. */
 
 .changelog {
   display: flex;
@@ -199,88 +193,10 @@ body {
   gap: 9px;
 }
 
-.changelog-title {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
 .changelog-box {
   /* Capped rather than stretched: the release history can be long, and the
      "Weiter" button has to stay reachable without scrolling the page. */
   max-height: 380px;
-  overflow-y: auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 18px;
-}
-
-.changelog-box::-webkit-scrollbar {
-  width: 9px;
-}
-
-.changelog-box::-webkit-scrollbar-thumb {
-  background: rgba(53, 201, 168, 0.28);
-  border-radius: 4px;
-}
-
-.changelog-entry + .changelog-entry {
-  margin-top: 16px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.changelog-entry-head {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  margin-bottom: 7px;
-}
-
-.changelog-entry-version {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.changelog-entry-current {
-  font-size: 10px;
-  font-weight: 600;
-  color: #08100e;
-  background: var(--accent);
-  border-radius: 4px;
-  padding: 2px 7px;
-}
-
-.changelog-entry-date {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-left: auto;
-}
-
-.changelog-list {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.changelog-list li {
-  font-size: 13px;
-  line-height: 1.55;
-  color: rgba(241, 245, 243, 0.85);
-}
-
-.changelog-list li + li {
-  margin-top: 5px;
-}
-
-.changelog-empty {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-muted);
 }
 
 /* --- Footer --- */

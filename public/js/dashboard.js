@@ -1,30 +1,15 @@
 (function () {
-  const statusEl = document.getElementById('status');
   const chatMessagesEl = document.getElementById('chat-messages');
   const chatForm = document.getElementById('chat-form');
   const chatInput = document.getElementById('chat-input');
   const historyListEl = document.getElementById('history-list');
 
-  const liveIndicatorEl = document.getElementById('live-indicator');
-  const liveTextEl = document.getElementById('live-text');
   const subscriptionWarningEl = document.getElementById('subscription-warning');
-
-  const streamInfoForm = document.getElementById('stream-info-form');
-  const titleInput = document.getElementById('stream-title');
-  const categoryInput = document.getElementById('stream-category');
-  const categoryResultsEl = document.getElementById('category-results');
-  const streamInfoStatusEl = document.getElementById('stream-info-status');
 
   const emotePickerBtn = document.getElementById('emote-picker-btn');
   const emotePicker = document.getElementById('emote-picker');
   const emotePickerSearch = document.getElementById('emote-picker-search');
   const emotePickerList = document.getElementById('emote-picker-list');
-
-  const chattersBtn = document.getElementById('chatters-btn');
-  const chattersCountEl = document.getElementById('chatters-count');
-  const chattersPanel = document.getElementById('chatters-panel');
-  const chattersSearch = document.getElementById('chatters-search');
-  const chattersList = document.getElementById('chatters-list');
 
   const MAX_ROWS = 200;
 
@@ -44,40 +29,17 @@
     { label: '10m', seconds: 600 },
   ];
 
-  let ws;
+  // Assigned at the bottom, once every handler it dispatches into exists.
+  let socket;
   let emoteMap = {};
-
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}`);
-
-    ws.addEventListener('open', () => setStatus(true));
-    ws.addEventListener('close', () => {
-      setStatus(false);
-      setTimeout(connect, 1500);
-    });
-    ws.addEventListener('error', () => ws.close());
-    ws.addEventListener('message', (event) => {
-      try {
-        handleMessage(JSON.parse(event.data));
-      } catch {
-        // ignore malformed messages
-      }
-    });
-  }
-
-  function setStatus(connected) {
-    statusEl.textContent = connected ? 'Verbunden' : 'Getrennt – versuche erneut…';
-    statusEl.classList.toggle('is-connected', connected);
-  }
 
   function handleMessage(msg) {
     if (msg.kind === 'state' && msg.state) {
       emoteMap = msg.state.emotes || {};
-      applyStreamStatus(msg.state.stream);
+      DashboardStream.applyStatus(msg.state.stream);
     }
     if (msg.kind === 'stream-status' && msg.status) {
-      applyStreamStatus(msg.status);
+      DashboardStream.applyStatus(msg.status);
     }
     if (msg.kind === 'emotes' && msg.map) {
       emoteMap = msg.map;
@@ -112,7 +74,7 @@
       applyEntryStatus(msg.id, msg.status);
     }
     if (msg.kind === 'moderation-error' && msg.message) {
-      showToast(msg.message);
+      showToast(t(msg.message));
     }
     if (msg.kind === 'state' && msg.state && msg.state.twitch) {
       applySubscriptionWarning(msg.state.twitch.subscriptions);
@@ -122,8 +84,8 @@
     if (msg.kind === 'twitch-status' && msg.status) {
       applySubscriptionWarning(msg.status.subscriptions);
       if (msg.status.connected) {
-        loadStreamInfo();
-        refreshChattersCount();
+        DashboardStream.load();
+        DashboardChatters.refreshCount();
       }
     }
   }
@@ -140,10 +102,11 @@
     subscriptionWarningEl.replaceChildren();
 
     const heading = document.createElement('strong');
-    const failedCount = subscriptions.failed.length;
-    heading.textContent = `${failedCount} von ${subscriptions.total} Twitch-Abonnements konnten nicht eingerichtet werden.`;
+    heading.textContent = t('{n} von {total} Twitch-Abonnements konnten nicht eingerichtet werden.')
+      .replace('{n}', subscriptions.failed.length)
+      .replace('{total}', subscriptions.total);
     subscriptionWarningEl.appendChild(heading);
-    subscriptionWarningEl.append(' Diese Ereignisse kommen nicht an:');
+    subscriptionWarningEl.append(` ${t('Diese Ereignisse kommen nicht an:')}`);
 
     const list = document.createElement('div');
     subscriptions.failed.forEach((f) => {
@@ -155,54 +118,9 @@
     subscriptionWarningEl.hidden = false;
   }
 
-  // Shared open/close for every dropdown-style popover (chatters, emote
-  // picker, category search results, the gear menu). They used to just flip
-  // the `hidden` attribute, which pops an element in and out of existence
-  // instantly — the same abruptness the chat highlight had, just on five
-  // more elements. `hidden` still gates actual DOM removal (so it stays out
-  // of tab order and screen readers while closed), but only after the fade
-  // has had time to play; `.is-visible` is the thing CSS actually animates
-  // and the thing callers should check for current state.
-  const PANEL_TRANSITION_MS = 140;
-  const panelCloseTimers = new WeakMap();
-
-  function isPanelOpen(el) {
-    return el.classList.contains('is-visible');
-  }
-
-  function openPanel(el) {
-    clearTimeout(panelCloseTimers.get(el));
-    el.hidden = false;
-    // Adding the class in the same tick as clearing `hidden` gives the
-    // browser nothing to transition from — it would just render already
-    // "open". One rAF lets the closed state paint first.
-    requestAnimationFrame(() => el.classList.add('is-visible'));
-  }
-
-  function closePanel(el) {
-    if (!isPanelOpen(el)) {
-      el.hidden = true;
-      return;
-    }
-    el.classList.remove('is-visible');
-    const timer = setTimeout(() => {
-      el.hidden = true;
-    }, PANEL_TRANSITION_MS);
-    panelCloseTimers.set(el, timer);
-  }
-
-  function showToast(text) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = text;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('is-visible'));
-
-    setTimeout(() => {
-      toast.classList.remove('is-visible');
-      setTimeout(() => toast.remove(), PANEL_TRANSITION_MS);
-    }, 4000);
-  }
+  // Panel fades and toasts live in shared/ui.js — the gear menu and the
+  // update banner use the exact same behaviour.
+  const { isPanelOpen, openPanel, closePanel, showToast } = window.SynsaUI;
 
   // --- Chat ---------------------------------------------------------------
 
@@ -343,8 +261,7 @@
   }
 
   function sendModeration(userId, seconds) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ kind: 'moderate', userId, duration: seconds }));
+    socket.send({ kind: 'moderate', userId, duration: seconds });
   }
 
   document.addEventListener('click', () => {
@@ -364,8 +281,6 @@
       m.hidden = true;
     });
     closePanel(emotePicker);
-    closePanel(chattersPanel);
-    closePanel(categoryResultsEl);
   });
 
   // Twitch's own emotes come pre-identified via message fragments; 7TV
@@ -408,8 +323,9 @@
   chatForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = chatInput.value.trim();
-    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ kind: 'send-chat-message', text }));
+    // The input is only cleared once the message is actually on its way, so
+    // nothing is lost while the socket is reconnecting.
+    if (!text || !socket.send({ kind: 'send-chat-message', text })) return;
     chatInput.value = '';
   });
 
@@ -456,7 +372,7 @@
     emotePickerList.innerHTML = '';
 
     if (!data) {
-      emotePickerList.innerHTML = '<div class="emote-picker-empty">Konnte Emotes nicht laden.</div>';
+      emotePickerList.innerHTML = `<div class="emote-picker-empty">${t('Konnte Emotes nicht laden.')}</div>`;
       return;
     }
 
@@ -507,7 +423,7 @@
     });
 
     if (!any) {
-      emotePickerList.innerHTML = '<div class="emote-picker-empty">Keine Treffer.</div>';
+      emotePickerList.innerHTML = `<div class="emote-picker-empty">${t('Keine Treffer.')}</div>`;
     }
   }
 
@@ -524,111 +440,6 @@
     chatInput.focus();
     chatInput.setSelectionRange(cursor, cursor);
   }
-
-  // --- Chatters (who's currently in chat) ------------------------------------
-
-  let chattersData = null;
-
-  async function fetchChatters() {
-    try {
-      const res = await fetch('/api/twitch/chatters');
-      return res.ok ? await res.json() : null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function refreshChattersCount() {
-    const data = await fetchChatters();
-    if (data) {
-      chattersData = data;
-      chattersCountEl.textContent = String(data.total);
-    }
-  }
-
-  chattersBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (isPanelOpen(chattersPanel)) {
-      closePanel(chattersPanel);
-      return;
-    }
-    openPanel(chattersPanel);
-
-    chattersSearch.value = '';
-    chattersList.innerHTML = '<div class="chatters-empty">Lade…</div>';
-    const data = await fetchChatters();
-    chattersData = data;
-    if (data) chattersCountEl.textContent = String(data.total);
-    renderChattersList(data, '');
-    chattersSearch.focus();
-  });
-
-  chattersSearch.addEventListener('input', (e) => {
-    renderChattersList(chattersData, e.target.value.trim().toLowerCase());
-  });
-
-  document.addEventListener('click', (e) => {
-    if (isPanelOpen(chattersPanel) && !e.target.closest('.chat-panel-title')) {
-      closePanel(chattersPanel);
-    }
-  });
-
-  const CHATTER_ROLE_LABELS = {
-    broadcaster: 'Broadcaster',
-    moderator: 'Moderatoren',
-    vip: 'VIPs',
-    subscriber: 'Abonnenten',
-    viewer: 'Zuschauer',
-  };
-  const CHATTER_ROLE_ORDER = ['broadcaster', 'moderator', 'vip', 'subscriber', 'viewer'];
-
-  function renderChattersList(data, filter) {
-    chattersList.innerHTML = '';
-
-    if (!data) {
-      chattersList.innerHTML = '<div class="chatters-empty">Konnte Chatter nicht laden.</div>';
-      return;
-    }
-
-    const filtered = filter
-      ? data.chatters.filter((c) => c.name.toLowerCase().includes(filter))
-      : data.chatters;
-
-    if (!filtered.length) {
-      chattersList.innerHTML = '<div class="chatters-empty">Keine Treffer.</div>';
-      return;
-    }
-
-    CHATTER_ROLE_ORDER.forEach((role) => {
-      const group = filtered.filter((c) => c.role === role);
-      if (!group.length) return;
-
-      const title = document.createElement('div');
-      title.className = 'chatters-group-title';
-      title.textContent = `${CHATTER_ROLE_LABELS[role]} · ${group.length}`;
-      chattersList.appendChild(title);
-
-      group.forEach((c) => {
-        const row = document.createElement('div');
-        row.className = `chatters-row chatters-role-${role}`;
-        row.textContent = c.name;
-        chattersList.appendChild(row);
-      });
-    });
-  }
-
-  // Each poll is a Twitch API round trip (~0.7s worth of work server-side),
-  // and the app lives in the tray — it spends most of its life minimized or
-  // behind OBS, where nobody can see the number anyway. Refresh on the way
-  // back instead, so it's current the moment it becomes visible again.
-  refreshChattersCount();
-  setInterval(() => {
-    if (!document.hidden) refreshChattersCount();
-  }, 60000);
-
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refreshChattersCount();
-  });
 
   // --- Hover tooltip for truncated messages ----------------------------------
 
@@ -901,151 +712,6 @@
     }
   }
 
-  // --- Live indicator + uptime -----------------------------------------------
 
-  let liveTickTimer = null;
-
-  function applyStreamStatus(status) {
-    if (!status) return;
-
-    clearInterval(liveTickTimer);
-    liveTickTimer = null;
-
-    const isLive = Boolean(status.live) && status.startedAt;
-    liveIndicatorEl.classList.toggle('is-live', isLive);
-
-    if (!isLive) {
-      liveTextEl.textContent = 'Offline';
-      return;
-    }
-
-    const tick = () => {
-      liveTextEl.textContent = `LIVE · ${formatDuration(Date.now() - status.startedAt)}`;
-    };
-    tick();
-    liveTickTimer = setInterval(tick, 1000);
-  }
-
-  function formatDuration(ms) {
-    const totalSec = Math.max(0, Math.floor(ms / 1000));
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    const mm = String(m).padStart(2, '0');
-    const ss = String(s).padStart(2, '0');
-    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-  }
-
-  // --- Stream info (title / category) --------------------------------------
-
-  let currentGameId = null;
-
-  async function loadStreamInfo() {
-    try {
-      const res = await fetch('/api/twitch/channel');
-      if (!res.ok) return;
-      const info = await res.json();
-      titleInput.value = info.title || '';
-      categoryInput.value = info.gameName || '';
-      currentGameId = info.gameId || null;
-    } catch {
-      // Twitch not connected yet, or a transient error — leave fields empty.
-    }
-  }
-
-  function debounce(fn, delay) {
-    let timer;
-    return (...args) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => fn(...args), delay);
-    };
-  }
-
-  const searchCategories = debounce(async (query) => {
-    if (!query) {
-      closePanel(categoryResultsEl);
-      return;
-    }
-    try {
-      const res = await fetch(`/api/twitch/categories?q=${encodeURIComponent(query)}`);
-      if (!res.ok) return;
-      const results = await res.json();
-      renderCategoryResults(results);
-    } catch {
-      // ignore — user can just retype
-    }
-  }, 300);
-
-  function renderCategoryResults(results) {
-    categoryResultsEl.innerHTML = '';
-
-    if (!results.length) {
-      closePanel(categoryResultsEl);
-      return;
-    }
-
-    results.forEach((game) => {
-      const row = document.createElement('div');
-      row.className = 'category-result';
-
-      const img = document.createElement('img');
-      img.src = game.boxArtUrl;
-      img.alt = '';
-      row.appendChild(img);
-
-      const name = document.createElement('span');
-      name.textContent = game.name;
-      row.appendChild(name);
-
-      row.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        categoryInput.value = game.name;
-        currentGameId = game.id;
-        closePanel(categoryResultsEl);
-      });
-
-      categoryResultsEl.appendChild(row);
-    });
-
-    openPanel(categoryResultsEl);
-  }
-
-  categoryInput.addEventListener('input', (e) => {
-    searchCategories(e.target.value.trim());
-  });
-
-  document.addEventListener('click', (e) => {
-    if (isPanelOpen(categoryResultsEl) && !e.target.closest('.category-field')) {
-      closePanel(categoryResultsEl);
-    }
-  });
-
-  let streamInfoStatusHideTimer = null;
-
-  streamInfoForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    clearTimeout(streamInfoStatusHideTimer);
-    streamInfoStatusEl.textContent = 'Speichern…';
-    streamInfoStatusEl.classList.remove('is-success', 'is-error');
-    openPanel(streamInfoStatusEl);
-
-    try {
-      const res = await fetch('/api/twitch/channel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: titleInput.value, gameId: currentGameId }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Fehler');
-      streamInfoStatusEl.textContent = 'Gespeichert';
-      streamInfoStatusEl.classList.add('is-success');
-    } catch (err) {
-      streamInfoStatusEl.textContent = err.message;
-      streamInfoStatusEl.classList.add('is-error');
-    }
-
-    streamInfoStatusHideTimer = setTimeout(() => closePanel(streamInfoStatusEl), 5000);
-  });
-
-  loadStreamInfo();
-  connect();
+  socket = connectPageSocket(handleMessage);
 })();

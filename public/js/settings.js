@@ -1,65 +1,71 @@
+// Settings: the things that are configured once and then apply to all of
+// SYNSA — the Twitch connection, and the interface language.
+//
+// Twitch used to sit on the control panel. It moved here because linking an
+// account is a setting, not something you operate while streaming; the
+// control panel keeps the test alerts and the volume.
 (function () {
-  const statusEl = document.getElementById('status');
-  const versionTextEl = document.getElementById('update-version-text');
-  const checkBtn = document.getElementById('update-check-btn');
-  const feedbackEl = document.getElementById('update-check-feedback');
+  const twitchStatusEl = document.getElementById('twitch-status');
+  const twitchConnectLink = document.getElementById('twitch-connect');
+  const twitchDisconnectForm = document.getElementById('twitch-disconnect-form');
+  const twitchSessionEl = document.getElementById('twitch-session');
+  const twitchSessionRevealEl = document.getElementById('twitch-session-reveal');
 
-  let ws;
-  let feedbackHideTimer = null;
+  const languageSelect = document.getElementById('language-select');
 
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}`);
-
-    ws.addEventListener('open', () => setStatus(true));
-    ws.addEventListener('close', () => {
-      setStatus(false);
-      setTimeout(connect, 1500);
-    });
-    ws.addEventListener('error', () => ws.close());
-  }
-
-  function setStatus(connected) {
-    statusEl.textContent = connected ? 'Verbunden' : 'Getrennt – versuche erneut…';
-    statusEl.classList.toggle('is-connected', connected);
-  }
-
-  function showFeedback(text) {
-    clearTimeout(feedbackHideTimer);
-    feedbackEl.textContent = text;
-    feedbackEl.classList.add('is-visible');
-    feedbackHideTimer = setTimeout(() => feedbackEl.classList.remove('is-visible'), 5000);
-  }
-
-  function loadVersion() {
-    fetch('/api/version')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && data.version) versionTextEl.textContent = `Installierte Version: ${data.version}`;
-      })
-      .catch(() => {
-        // Not critical for this page to function.
-      });
-  }
-
-  checkBtn.addEventListener('click', async () => {
-    checkBtn.disabled = true;
-    try {
-      const res = await fetch('/api/update/check', { method: 'POST' });
-      const state = await res.json();
-      // An "available" result is rendered by update-banner.js via its own
-      // WebSocket broadcast — this only needs to cover the case that script
-      // doesn't show anything for: nothing found.
-      if (state.phase === 'idle') {
-        showFeedback('SYNSA ist aktuell.');
+  function applyTwitchStatus(status) {
+    if (!status) return;
+    if (status.connected) {
+      twitchStatusEl.textContent = `${t('Verbunden als')} ${status.channel}`;
+      twitchStatusEl.classList.add('is-connected');
+      twitchConnectLink.hidden = true;
+      twitchDisconnectForm.hidden = false;
+      if (status.sessionId) {
+        window.RevealCopy.setValue(twitchSessionRevealEl, status.sessionId);
+        twitchSessionEl.hidden = false;
+      } else {
+        twitchSessionEl.hidden = true;
       }
+    } else {
+      twitchStatusEl.textContent = t('Nicht verbunden');
+      twitchStatusEl.classList.remove('is-connected');
+      twitchConnectLink.hidden = false;
+      twitchSessionEl.hidden = true;
+      twitchDisconnectForm.hidden = true;
+    }
+  }
+
+  function handleMessage(msg) {
+    if (msg.kind === 'state' && msg.state) applyTwitchStatus(msg.state.twitch);
+    if (msg.kind === 'twitch-status') applyTwitchStatus(msg.status);
+  }
+
+  // The status arrives over the socket as well, but only when it changes —
+  // this fills the card on a fresh page load.
+  fetch('/api/twitch/status')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((status) => applyTwitchStatus(status))
+    .catch(() => {
+      // The socket below catches up as soon as something changes.
+    });
+
+  // --- Language ----------------------------------------------------------
+
+  languageSelect.value = window.SynsaI18n.getLanguage();
+
+  languageSelect.addEventListener('change', async () => {
+    const language = languageSelect.value;
+    languageSelect.disabled = true;
+    try {
+      await window.SynsaI18n.setLanguage(language);
+      // Reloading rather than re-translating in place: every page builds some
+      // of its text in JavaScript (status lines, changelog, chat rows), and a
+      // reload is both simpler and guaranteed complete.
+      location.reload();
     } catch {
-      showFeedback('Update-Check fehlgeschlagen.');
-    } finally {
-      checkBtn.disabled = false;
+      languageSelect.disabled = false;
     }
   });
 
-  loadVersion();
-  connect();
+  connectPageSocket(handleMessage);
 })();

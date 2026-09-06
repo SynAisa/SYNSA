@@ -1,0 +1,33 @@
+/* "Über SYNSA" — version, update check and the release history. Reached from
+   the gear menu, below the settings. Cards, buttons and colours come from
+   control.css; the changelog list from changelog.css. */
+
+.about-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.about-version {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.about-version strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.about-version span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.about-changelog-box {
+  /* Long enough to read a few releases without scrolling the whole page,
+     short enough that the section stays a section. */
+  max-height: 420px;
+}

@@ -16,7 +16,6 @@
   const progressPercent = document.getElementById('progress-percent');
   const progressDetail = document.getElementById('progress-detail');
   const changelogBox = document.getElementById('changelog-box');
-  const changelogEmpty = document.getElementById('changelog-empty');
   const continueBtn = document.getElementById('continue-btn');
   const footerNote = document.getElementById('footer-note');
 
@@ -38,16 +37,10 @@
 
   function formatRemaining(seconds) {
     if (!isFinite(seconds) || seconds <= 0) return '';
-    if (seconds < 60) return `noch ${Math.ceil(seconds)} s`;
+    if (seconds < 60) return t('noch {n} s').replace('{n}', Math.ceil(seconds));
     const minutes = Math.floor(seconds / 60);
     const rest = Math.ceil(seconds % 60);
-    return `noch ${minutes}:${String(rest).padStart(2, '0')} min`;
-  }
-
-  function formatDate(iso) {
-    if (!iso) return '';
-    const date = new Date(iso);
-    return isNaN(date) ? '' : date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return t('noch {t} min').replace('{t}', `${minutes}:${String(rest).padStart(2, '0')}`);
   }
 
   // --- Download rate ---------------------------------------------------------
@@ -101,7 +94,7 @@
 
     const parts = [];
     if (download.totalBytes) {
-      parts.push(`${formatMB(download.downloadedBytes || 0)} von ${formatMB(download.totalBytes)}`);
+      parts.push(t('{a} von {b}').replace('{a}', formatMB(download.downloadedBytes || 0)).replace('{b}', formatMB(download.totalBytes)));
     }
 
     const rate = updateRate(download);
@@ -130,127 +123,77 @@
     if (state.phase !== 'downloading') resetRate();
     renderProgress(state.phase === 'downloading' ? state.download : null);
 
+    // {v} rather than a template literal: English puts the version in a
+    // different place than German ("Downloading version 1.2" vs "Version 1.2
+    // wird heruntergeladen"), so the placeholder has to be part of the
+    // translated sentence, not glued around it.
+    const withVersion = (german, version) => t(german).replace('{v}', version);
+
     switch (state.phase) {
       case 'checking':
         statusDot.dataset.state = 'checking';
-        statusTitle.textContent = 'Suche nach Updates …';
-        statusSubtitle.textContent = 'Einen Moment.';
+        statusTitle.textContent = t('Suche nach Updates …');
+        statusSubtitle.textContent = t('Einen Moment.');
         break;
 
       case 'available':
         statusDot.dataset.state = 'available';
-        statusTitle.textContent = `Update auf Version ${release.version} verfügbar`;
-        statusSubtitle.textContent = 'Du kannst es jetzt oder später installieren.';
+        statusTitle.textContent = withVersion('Update auf Version {v} verfügbar', release.version);
+        statusSubtitle.textContent = t('Du kannst es jetzt oder später installieren.');
         statusAction.hidden = false;
-        statusAction.textContent = 'Jetzt aktualisieren';
+        statusAction.textContent = t('Jetzt aktualisieren');
         break;
 
       case 'downloading':
         statusDot.dataset.state = 'downloading';
-        statusTitle.textContent = `Version ${release.version} wird heruntergeladen`;
-        statusSubtitle.textContent = 'Du kannst währenddessen weitermachen.';
+        statusTitle.textContent = withVersion('Version {v} wird heruntergeladen', release.version);
+        statusSubtitle.textContent = t('Du kannst währenddessen weitermachen.');
         break;
 
       case 'ready':
         statusDot.dataset.state = 'ready';
-        statusTitle.textContent = `Version ${release.version} ist bereit`;
+        statusTitle.textContent = withVersion('Version {v} ist bereit', release.version);
         statusSubtitle.textContent = state.installBlocked
-          ? BLOCKED_MESSAGE
-          : 'SYNSA startet nach der Installation automatisch neu.';
+          ? t(BLOCKED_MESSAGE)
+          : t('SYNSA startet nach der Installation automatisch neu.');
         statusAction.hidden = false;
-        statusAction.textContent = 'Jetzt installieren';
+        statusAction.textContent = t('Jetzt installieren');
         statusAction.disabled = actionBusy || state.installBlocked;
         break;
 
       case 'installing':
         statusDot.dataset.state = 'downloading';
-        statusTitle.textContent = 'SYNSA wird neu gestartet …';
-        statusSubtitle.textContent = 'Die Aktualisierung wird abgeschlossen.';
+        statusTitle.textContent = t('SYNSA wird neu gestartet …');
+        statusSubtitle.textContent = t('Die Aktualisierung wird abgeschlossen.');
         continueBtn.disabled = true;
         break;
 
       case 'error':
         statusDot.dataset.state = 'error';
-        statusTitle.textContent = 'Update nicht möglich';
-        statusSubtitle.textContent = (state.error && state.error.message) || 'Unbekannter Fehler.';
+        statusTitle.textContent = t('Update nicht möglich');
+        // Server messages come through the same table: they are German
+        // sentences too, so they translate exactly like the rest.
+        statusSubtitle.textContent = t((state.error && state.error.message) || 'Unbekannter Fehler.');
         statusAction.hidden = false;
-        statusAction.textContent = 'Erneut versuchen';
+        statusAction.textContent = t('Erneut versuchen');
         break;
 
       default:
         // idle: nothing newer exists, which on this screen is the good case
         // and deserves saying out loud rather than showing nothing.
         statusDot.dataset.state = 'current';
-        statusTitle.textContent = 'SYNSA ist aktuell';
+        statusTitle.textContent = t('SYNSA ist aktuell');
         statusSubtitle.textContent = state.currentVersion
-          ? `Version ${state.currentVersion} · keine weiteren Updates verfügbar.`
-          : 'Keine weiteren Updates verfügbar.';
+          ? withVersion('Version {v} · keine weiteren Updates verfügbar.', state.currentVersion)
+          : t('Keine weiteren Updates verfügbar.');
     }
   }
 
   // --- Changelog -------------------------------------------------------------
 
-  function renderChangelog(data) {
-    const entries = (data && data.entries) || [];
-
-    if (entries.length === 0) {
-      changelogEmpty.textContent =
-        data && data.unavailable
-          ? 'Die Änderungen konnten gerade nicht geladen werden.'
-          : 'Noch keine Änderungen veröffentlicht.';
-      return;
-    }
-
-    changelogBox.textContent = '';
-
-    for (const entry of entries) {
-      const article = document.createElement('article');
-      article.className = 'changelog-entry';
-
-      const head = document.createElement('div');
-      head.className = 'changelog-entry-head';
-
-      const version = document.createElement('span');
-      version.className = 'changelog-entry-version';
-      version.textContent = entry.version;
-      head.appendChild(version);
-
-      if (data.currentVersion && entry.version === data.currentVersion) {
-        const badge = document.createElement('span');
-        badge.className = 'changelog-entry-current';
-        badge.textContent = 'installiert';
-        head.appendChild(badge);
-      }
-
-      const date = formatDate(entry.publishedAt);
-      if (date) {
-        const dateEl = document.createElement('span');
-        dateEl.className = 'changelog-entry-date';
-        dateEl.textContent = date;
-        head.appendChild(dateEl);
-      }
-
-      article.appendChild(head);
-
-      // textContent throughout: release bodies are written on GitHub and are
-      // never treated as markup here.
-      const list = document.createElement('ul');
-      list.className = 'changelog-list';
-      for (const line of entry.notes || []) {
-        const item = document.createElement('li');
-        item.textContent = line;
-        list.appendChild(item);
-      }
-      if (list.childElementCount > 0) article.appendChild(list);
-
-      changelogBox.appendChild(article);
-    }
-  }
-
-  fetch('/api/changelog')
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data) => renderChangelog(data))
-    .catch(() => renderChangelog(null));
+  // Rendered by shared/changelog.js, the same list the "Über SYNSA" section
+  // in the settings shows.
+  loadChangelog(changelogBox);
 
   // --- Actions ---------------------------------------------------------------
 
@@ -275,7 +218,7 @@
 
     if (phase === 'ready') {
       if (currentState.installBlocked) {
-        statusSubtitle.textContent = BLOCKED_MESSAGE;
+        statusSubtitle.textContent = t(BLOCKED_MESSAGE);
         return;
       }
       actionBusy = true;
@@ -284,7 +227,7 @@
         actionBusy = false;
         if (!ok) {
           statusAction.disabled = false;
-          statusSubtitle.textContent = (data && data.message) || 'Installation nicht möglich.';
+          statusSubtitle.textContent = t((data && data.message) || 'Installation nicht möglich.');
         }
       });
       return;

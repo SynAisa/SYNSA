@@ -1,8 +1,6 @@
+/* Page-specific tokens only — the shared palette lives in theme.css. */
 :root {
-  --bg-page: #0b0d0d;
-  --bg-card: rgba(22, 25, 25, 0.9);
   --bg-row: rgba(255, 255, 255, 0.03);
-  --border: rgba(53, 201, 168, 0.25);
   --live: #E5484D;
   /* Verlauf icon colors only — kept muted on purpose so they read as a
      scanning aid, not a second competing accent system next to the
@@ -14,7 +12,6 @@
   --type-subscription: #7BC96F;
   --type-cheer: #D9A75C;
   --type-raid: #8C93E0;
-  --text-muted: rgba(241, 245, 243, 0.58);
 }
 
 * {

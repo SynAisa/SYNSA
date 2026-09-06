@@ -31,25 +31,6 @@
       &nbsp;·&nbsp; Größe/Transparenz wird automatisch erkannt.
     </p>
 
-    <div class="card twitch-card">
-      <div class="card-title">Twitch</div>
-      <div class="twitch-row">
-        <span id="twitch-status" class="twitch-status">Nicht verbunden</span>
-        <a id="twitch-connect" class="twitch-connect" href="/setup.html">Mit Twitch verbinden</a>
-        <form id="twitch-disconnect-form" action="/auth/twitch/logout" method="post" hidden>
-          <button type="submit" class="twitch-disconnect">Trennen</button>
-        </form>
-      </div>
-      <div id="twitch-session" class="twitch-session" hidden>
-        Session:
-        <span id="twitch-session-reveal" class="reveal-copy" data-reveal-copy data-value="">
-          <code class="reveal-copy-value"></code>
-          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
-          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
-        </span>
-      </div>
-    </div>
-
     <div class="card volume-card">
       <div class="card-title">Master Volume</div>
       <div class="volume-row">
@@ -154,16 +135,16 @@
       </form>
     </div>
 
-    <section class="log-section">
-      <div class="card-title">Alert Box</div>
-      <div id="event-log" class="event-log"></div>
-    </section>
   </div>
 
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/ui.js"></script>
   <script src="/shared/alert-types.js"></script>
   <script src="/shared/module-menu.js"></script>
   <script src="/shared/reveal-copy.js"></script>
   <script src="/js/sounds.js"></script>
+  <script src="/shared/page-socket.js"></script>
   <script src="/js/control.js"></script>
 </body>
 </html>

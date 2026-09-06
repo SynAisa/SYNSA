@@ -1,12 +1,46 @@
-// Shared update banner, mounted into <div id="update-banner"></div> on both
-// dashboard.html and settings.html. Purely a renderer: all update state
-// (phase, release metadata, download progress, errors, whether the stream
-// lock blocks installing) comes from the server's UpdateManager broadcasts
-// — see update/manager.js. This script never decides anything about
-// updates itself, only how to display what it's told.
+// Shared update banner. A page opts in with a single
+// <div id="update-banner"></div>; the markup below is built here rather than
+// repeated in every page's HTML, which is how it used to be — seventeen
+// identical lines in dashboard.html, settings.html and setup.html that all
+// had to be edited together whenever the banner changed.
+//
+// Purely a renderer: all update state (phase, release metadata, download
+// progress, errors, whether the stream lock blocks installing) comes from
+// the server's UpdateManager broadcasts — see update/manager.js. This script
+// never decides anything about updates itself, only how to display what it's
+// told.
 (function () {
   const root = document.getElementById('update-banner');
   if (!root) return;
+
+  root.classList.add('update-banner');
+  root.hidden = true;
+  root.innerHTML = `
+    <div id="update-banner-main" class="update-banner-main">
+      <div class="update-banner-text">
+        <strong id="update-banner-title"></strong>
+        <span id="update-banner-subtitle"></span>
+      </div>
+      <div class="update-banner-actions">
+        <button type="button" id="update-banner-notes-btn" class="update-banner-link">Änderungen anzeigen</button>
+        <button type="button" id="update-banner-later-btn" class="update-banner-link">Später</button>
+        <button type="button" id="update-banner-action-btn" class="update-banner-primary"></button>
+      </div>
+    </div>
+    <div id="update-banner-progress" class="update-banner-progress" hidden>
+      <div class="update-banner-progress-track"><div id="update-banner-progress-fill" class="update-banner-progress-fill"></div></div>
+      <span id="update-banner-progress-label" class="update-banner-progress-label"></span>
+    </div>
+    <div id="update-banner-notes" class="update-banner-notes" hidden></div>
+    <div id="update-banner-error" class="update-banner-error" hidden>
+      <span id="update-banner-error-text"></span>
+      <button type="button" id="update-banner-retry-btn">Erneut versuchen</button>
+    </div>
+  `;
+
+  // Injected after shared/i18n.js walked the page, so this subtree gets its
+  // own pass.
+  window.SynsaI18n.translateTree(root);
 
   const mainEl = document.getElementById('update-banner-main');
   const titleEl = document.getElementById('update-banner-title');
@@ -27,17 +61,7 @@
   let currentState = null;
   let notesOpen = false;
 
-  function showToast(text) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = text;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('is-visible'));
-    setTimeout(() => {
-      toast.classList.remove('is-visible');
-      setTimeout(() => toast.remove(), 140);
-    }, 4000);
-  }
+  const { showToast } = window.SynsaUI;
 
   function postJSON(url) {
     return fetch(url, { method: 'POST' }).then(async (res) => ({
@@ -81,7 +105,7 @@
 
     errorEl.hidden = phase !== 'error';
     if (phase === 'error' && error) {
-      errorTextEl.textContent = error.message;
+      errorTextEl.textContent = t(error.message);
     }
 
     progressEl.hidden = phase !== 'downloading';
@@ -92,7 +116,8 @@
         : `${download.percent}%`;
     }
 
-    const titlePrefix = release.type === 'critical' ? 'Wichtiges Update' : `SYNSA ${release.version} verfügbar`;
+    const titlePrefix =
+      release.type === 'critical' ? t('Wichtiges Update') : t('SYNSA {v} verfügbar').replace('{v}', release.version);
     titleEl.textContent = titlePrefix;
 
     mainEl.hidden = phase === 'error';
@@ -106,26 +131,26 @@
 
     switch (phase) {
       case 'available':
-        subtitleEl.textContent = 'Eine neue Version ist verfügbar.';
+        subtitleEl.textContent = t('Eine neue Version ist verfügbar.');
         actionBtn.hidden = false;
-        actionBtn.textContent = 'Jetzt aktualisieren';
+        actionBtn.textContent = t('Jetzt aktualisieren');
         actionBtn.classList.remove('is-blocked');
         actionBtn.title = '';
         break;
       case 'downloading':
-        subtitleEl.textContent = `SYNSA ${release.version} wird heruntergeladen`;
+        subtitleEl.textContent = t('SYNSA {v} wird heruntergeladen').replace('{v}', release.version);
         actionBtn.hidden = true;
         break;
       case 'ready':
-        subtitleEl.textContent = 'Das Update wurde heruntergeladen.';
+        subtitleEl.textContent = t('Das Update wurde heruntergeladen.');
         actionBtn.hidden = false;
-        actionBtn.textContent = 'Jetzt installieren';
+        actionBtn.textContent = t('Jetzt installieren');
         actionBtn.classList.toggle('is-blocked', installBlocked);
-        actionBtn.title = installBlocked ? BLOCKED_MESSAGE : '';
+        actionBtn.title = installBlocked ? t(BLOCKED_MESSAGE) : '';
         break;
       case 'installing':
-        titleEl.textContent = 'SYNSA wird neu gestartet …';
-        subtitleEl.textContent = 'Aktualisierung wird abgeschlossen. SYNSA wird gleich neu gestartet.';
+        titleEl.textContent = t('SYNSA wird neu gestartet …');
+        subtitleEl.textContent = t('Aktualisierung wird abgeschlossen. SYNSA wird gleich neu gestartet.');
         actionBtn.hidden = true;
         break;
       default:
@@ -165,7 +190,7 @@
 
     if (currentState.phase === 'ready') {
       if (currentState.installBlocked) {
-        showToast(BLOCKED_MESSAGE);
+        showToast(t(BLOCKED_MESSAGE));
         return;
       }
       if (installRequested) return;
@@ -175,7 +200,7 @@
         if (!ok) {
           installRequested = false;
           actionBtn.disabled = false;
-          showToast((data && data.message) || 'Installation nicht möglich.');
+          showToast(t((data && data.message) || 'Installation nicht möglich.'));
         }
       });
     }

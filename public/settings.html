@@ -22,41 +22,61 @@
       <div id="status" class="status">Verbinde…</div>
     </header>
 
-    <div class="card">
-      <div class="card-title">Updates</div>
-      <div class="update-check-row">
-        <span id="update-version-text" class="twitch-status"></span>
-        <button type="button" id="update-check-btn" class="twitch-connect">Nach Updates suchen</button>
+    <div id="update-banner" hidden></div>
+
+    <!-- Twitch lives here rather than on the control panel: it is a setting
+         for all of SYNSA, not a thing you operate while streaming. -->
+    <div class="card twitch-card">
+      <div class="card-title">Twitch</div>
+      <div class="twitch-row">
+        <span id="twitch-status" class="twitch-status">Nicht verbunden</span>
+        <a id="twitch-connect" class="twitch-connect" href="/setup.html">Mit Twitch verbinden</a>
+        <form id="twitch-disconnect-form" action="/auth/twitch/logout" method="post" hidden>
+          <button type="submit" class="twitch-disconnect">Trennen</button>
+        </form>
       </div>
-      <span id="update-check-feedback" class="update-check-feedback"></span>
+      <div id="twitch-session" class="twitch-session" hidden>
+        Session:
+        <span id="twitch-session-reveal" class="reveal-copy" data-reveal-copy data-value="">
+          <code class="reveal-copy-value"></code>
+          <button type="button" class="reveal-copy-eye" title="Anzeigen" aria-label="Anzeigen"></button>
+          <button type="button" class="reveal-copy-btn" title="Kopieren" aria-label="Kopieren"></button>
+        </span>
+      </div>
     </div>
 
-    <div id="update-banner" class="update-banner" hidden>
-      <div id="update-banner-main" class="update-banner-main">
-        <div class="update-banner-text">
-          <strong id="update-banner-title"></strong>
-          <span id="update-banner-subtitle"></span>
-        </div>
-        <div class="update-banner-actions">
-          <button type="button" id="update-banner-notes-btn" class="update-banner-link">Änderungen anzeigen</button>
-          <button type="button" id="update-banner-later-btn" class="update-banner-link">Später</button>
-          <button type="button" id="update-banner-action-btn" class="update-banner-primary"></button>
-        </div>
+    <div class="card">
+      <div class="card-title">Sprache</div>
+      <div class="twitch-row">
+        <span class="twitch-status" id="language-note">Sprache der Oberfläche</span>
+        <select id="language-select" class="language-select">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+        </select>
       </div>
-      <div id="update-banner-progress" class="update-banner-progress" hidden>
-        <div class="update-banner-progress-track"><div id="update-banner-progress-fill" class="update-banner-progress-fill"></div></div>
-        <span id="update-banner-progress-label" class="update-banner-progress-label"></span>
-      </div>
-      <div id="update-banner-notes" class="update-banner-notes" hidden></div>
-      <div id="update-banner-error" class="update-banner-error" hidden>
-        <span id="update-banner-error-text"></span>
-        <button type="button" id="update-banner-retry-btn">Erneut versuchen</button>
-      </div>
+      <p class="hint language-hint">
+        Deutsch ist die Originalsprache von SYNSA. Neue Funktionen erscheinen
+        zuerst auf Deutsch; einzelne Stellen können daher in der englischen
+        Fassung noch deutsch sein.
+      </p>
     </div>
+
+    <p class="hint">
+      Einstellungen einzelner Module liegen beim jeweiligen Modul:
+      Farbe und Cover beim <a href="/music-settings.html">Music-Overlay</a>,
+      Dauer, Beschriftung und Schriftgröße beim <a href="/countdown-settings.html">Countdown</a>,
+      Lautstärke im <a href="/control.html">Control-Panel</a>.
+      Version und Änderungsliste stehen unter <a href="/about.html">Über SYNSA</a>.
+    </p>
   </div>
 
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/ui.js"></script>
   <script src="/shared/module-menu.js"></script>
+  <script src="/shared/page-socket.js"></script>
   <script src="/shared/update-banner.js"></script>
+  <script src="/shared/reveal-copy.js"></script>
   <script src="/js/settings.js"></script>
 </body>
 </html>

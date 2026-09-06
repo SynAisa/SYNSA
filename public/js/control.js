@@ -1,7 +1,4 @@
 (function () {
-  const statusEl = document.getElementById('status');
-  const logEl = document.getElementById('event-log');
-
   const randomNames = [
     'nova_stream', 'pixelfox', 'glitchwave', 'moonrider', 'kaiden_tv',
     'echoplex', 'brightsignal', 'saltybard', 'quietstorm', 'ironwillow',
@@ -11,94 +8,35 @@
   const volumeSlider = document.getElementById('volume-slider');
   const volumeValue = document.getElementById('volume-value');
 
-  const twitchStatusEl = document.getElementById('twitch-status');
-  const twitchConnectLink = document.getElementById('twitch-connect');
-  const twitchDisconnectForm = document.getElementById('twitch-disconnect-form');
-  const twitchSessionEl = document.getElementById('twitch-session');
-  const twitchSessionRevealEl = document.getElementById('twitch-session-reveal');
+  // Assigned at the very bottom, once every handler it dispatches into
+  // exists. Nothing sends before then.
+  let socket;
 
-  let ws;
-
-  function connect() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}`);
-
-    ws.addEventListener('open', () => setStatus(true));
-    ws.addEventListener('close', () => {
-      setStatus(false);
-      setTimeout(connect, 1500);
-    });
-    ws.addEventListener('error', () => ws.close());
-    ws.addEventListener('message', (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.kind === 'state' && msg.state) {
-          applyVolume(msg.state.volume, false);
-          applyTwitchStatus(msg.state.twitch);
-        }
-        if (msg.kind === 'volume') applyVolume(msg.volume, false);
-        if (msg.kind === 'twitch-status') applyTwitchStatus(msg.status);
-      } catch {
-        // ignore malformed messages
-      }
-    });
+  // The Twitch connection moved to the settings: it is configured once, not
+  // operated while streaming. This page keeps what you actually reach for
+  // during a stream — test alerts and the master volume.
+  function handleMessage(msg) {
+    if (msg.kind === 'state' && msg.state) applyVolume(msg.state.volume, false);
+    if (msg.kind === 'volume') applyVolume(msg.volume, false);
   }
 
   function applyVolume(volume, send) {
     const percent = Math.round(volume * 100);
     volumeSlider.value = percent;
     volumeValue.textContent = `${percent}%`;
-    if (send && ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ kind: 'set-volume', volume }));
-    }
+    if (send) socket.send({ kind: 'set-volume', volume });
   }
 
   volumeSlider.addEventListener('input', (e) => {
     applyVolume(Number(e.target.value) / 100, true);
   });
 
-  function applyTwitchStatus(status) {
-    if (!status) return;
-    if (status.connected) {
-      twitchStatusEl.textContent = `Verbunden als ${status.channel}`;
-      twitchStatusEl.classList.add('is-connected');
-      twitchConnectLink.hidden = true;
-      twitchDisconnectForm.hidden = false;
-      if (status.sessionId) {
-        window.RevealCopy.setValue(twitchSessionRevealEl, status.sessionId);
-        twitchSessionEl.hidden = false;
-      } else {
-        twitchSessionEl.hidden = true;
-      }
-    } else {
-      twitchStatusEl.textContent = 'Nicht verbunden';
-      twitchStatusEl.classList.remove('is-connected');
-      twitchConnectLink.hidden = false;
-      twitchSessionEl.hidden = true;
-      twitchDisconnectForm.hidden = true;
-    }
-  }
-
-  function setStatus(connected) {
-    statusEl.textContent = connected ? 'Verbunden' : 'Getrennt – versuche erneut…';
-    statusEl.classList.toggle('is-connected', connected);
-  }
-
+  // Where a sent test alert shows up is the Alert Box on the dashboard, which
+  // lists it with its real status (wartet / läuft / abgespielt) alongside
+  // every genuine event. The local text log that used to sit at the bottom of
+  // this page only repeated what it had just sent, without any of that.
   function send(alert) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ kind: 'trigger-alert', alert }));
-    logEvent(alert);
-  }
-
-  function logEvent(alert) {
-    const item = document.createElement('div');
-    item.className = 'log-item';
-
-    const type = document.createElement('span');
-    type.textContent = alert.type;
-
-    item.append(`${new Date().toLocaleTimeString()} — `, type, ` — ${alert.data.username}`);
-    logEl.prepend(item);
+    socket.send({ kind: 'trigger-alert', alert });
   }
 
   document.getElementById('follow-form').addEventListener('submit', (e) => {
@@ -167,5 +105,5 @@
     send({ type: 'raid', data: { username, viewers } });
   });
 
-  connect();
+  socket = connectPageSocket(handleMessage);
 })();

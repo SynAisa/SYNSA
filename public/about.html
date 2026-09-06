@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNSA · Über SYNSA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/control.css">
+<link rel="stylesheet" href="/css/nav.css">
+<link rel="stylesheet" href="/css/update.css">
+<link rel="stylesheet" href="/css/changelog.css">
+<link rel="stylesheet" href="/css/about.css">
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="header-left">
+        <div id="module-menu-root"></div>
+        <h1>Über SYNSA</h1>
+      </div>
+      <div id="status" class="status">Verbinde…</div>
+    </header>
+
+    <div id="update-banner" hidden></div>
+
+    <div class="card about-card">
+      <div class="card-title">Version</div>
+
+      <div class="about-version-row">
+        <div class="about-version">
+          <strong id="about-version-text">SYNSA</strong>
+          <span id="about-version-note">Version wird geladen …</span>
+        </div>
+        <button type="button" id="update-check-btn" class="twitch-connect">Nach Updates suchen</button>
+      </div>
+      <span id="update-check-feedback" class="update-check-feedback"></span>
+    </div>
+
+    <!-- The same release history the welcome screen shows after an update,
+         reachable here at any time. -->
+    <div class="card about-card">
+      <div class="card-title">Änderungen</div>
+      <div class="changelog-box about-changelog-box" id="changelog-box">
+        <p class="changelog-empty">Wird geladen …</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/ui.js"></script>
+  <script src="/shared/module-menu.js"></script>
+  <script src="/shared/page-socket.js"></script>
+  <script src="/shared/update-banner.js"></script>
+  <script src="/shared/changelog.js"></script>
+  <script src="/js/about.js"></script>
+</body>
+</html>

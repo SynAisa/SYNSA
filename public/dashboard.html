@@ -24,28 +24,7 @@
       </div>
     </header>
 
-    <div id="update-banner" class="update-banner" hidden>
-      <div id="update-banner-main" class="update-banner-main">
-        <div class="update-banner-text">
-          <strong id="update-banner-title"></strong>
-          <span id="update-banner-subtitle"></span>
-        </div>
-        <div class="update-banner-actions">
-          <button type="button" id="update-banner-notes-btn" class="update-banner-link">Änderungen anzeigen</button>
-          <button type="button" id="update-banner-later-btn" class="update-banner-link">Später</button>
-          <button type="button" id="update-banner-action-btn" class="update-banner-primary"></button>
-        </div>
-      </div>
-      <div id="update-banner-progress" class="update-banner-progress" hidden>
-        <div class="update-banner-progress-track"><div id="update-banner-progress-fill" class="update-banner-progress-fill"></div></div>
-        <span id="update-banner-progress-label" class="update-banner-progress-label"></span>
-      </div>
-      <div id="update-banner-notes" class="update-banner-notes" hidden></div>
-      <div id="update-banner-error" class="update-banner-error" hidden>
-        <span id="update-banner-error-text"></span>
-        <button type="button" id="update-banner-retry-btn">Erneut versuchen</button>
-      </div>
-    </div>
+    <div id="update-banner" hidden></div>
 
     <div id="subscription-warning" class="subscription-warning" hidden></div>
 
@@ -118,9 +97,15 @@
     </div>
   </div>
 
+  <script src="/i18n/en.js"></script>
+  <script src="/shared/i18n.js"></script>
+  <script src="/shared/ui.js"></script>
   <script src="/shared/alert-types.js"></script>
   <script src="/shared/module-menu.js"></script>
   <script src="/shared/update-banner.js"></script>
+  <script src="/shared/page-socket.js"></script>
+  <script src="/js/dashboard/chatters.js"></script>
+  <script src="/js/dashboard/stream.js"></script>
   <script src="/js/dashboard.js"></script>
 </body>
 </html>
